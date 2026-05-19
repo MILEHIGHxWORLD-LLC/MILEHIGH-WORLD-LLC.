@@ -21,6 +21,7 @@ namespace Milehigh.World.Terminal
         private static readonly Regex SafeCommandRegex = new Regex(@"^[a-zA-Z0-9\s._\-]+$", RegexOptions.Compiled);
 
         private Coroutine? _typewriterCoroutine;
+        private string _lastCommand = "";
 
         // ⚡ Bolt: Shared cache for WaitForSeconds to eliminate GC allocations during typewriter effects.
         // Using int millisecond keys to avoid floating-point precision issues in dictionary lookups.
@@ -63,6 +64,19 @@ namespace Milehigh.World.Terminal
             }
         }
 
+        private void Update()
+        {
+            // 🎨 Palette: Command History (Up Arrow) to recall previous input
+            if (commandInput != null && commandInput.isFocused && Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                if (!string.IsNullOrEmpty(_lastCommand))
+                {
+                    commandInput.text = _lastCommand;
+                    commandInput.MoveTextEnd(false);
+                }
+            }
+        }
+
         public void ProcessCommand(string input)
         {
             // 🛡️ Sentinel: Early exit and basic echo for empty input.
@@ -78,6 +92,7 @@ namespace Milehigh.World.Terminal
             }
 
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection.
+            // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection (e.g. Rich Text tags).
             if (input.Length > MaxInputLength)
             {
                 WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Input exceeds maximum length (256 characters).");
@@ -95,6 +110,14 @@ namespace Milehigh.World.Terminal
             // 🎨 Palette: Echo validated user command to terminal.
             WriteToTerminal($"\n<color=#888888>> {input}</color>");
             CleanupInputAfterCommand();
+            _lastCommand = input;
+
+            // UX Enhancement: Clear input and refocus immediately for better flow
+            if (commandInput != null)
+            {
+                commandInput.text = "";
+                commandInput.ActivateInputField();
+            }
 
             string[] parts = input.Trim().Split(' ');
             string command = parts[0].ToLower();
@@ -196,6 +219,12 @@ namespace Milehigh.World.Terminal
                 }
 
                 yield return GetWait(totalDelay);
+                    delay = commaDelay;
+                }
+
+                // ⚡ Bolt: Zero-allocation yield via shared cache
+                // UX Learning: Punctuation delays trigger after character is visible
+                yield return GetWait(delay);
             }
 
             _typewriterCoroutine = null;
