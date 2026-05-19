@@ -24,10 +24,6 @@ namespace Milehigh.World.Terminal
         private Coroutine? _typewriterCoroutine;
         private string _lastCommand = "";
 
-        // ⚡ Bolt: Cache for WaitForSeconds to eliminate GC allocations during coroutine execution.
-        private static readonly Dictionary<int, WaitForSeconds> _waitCache = new Dictionary<int, WaitForSeconds>();
-
-        private WaitForSeconds GetWait(float seconds)
         // ⚡ Bolt: Shared cache for WaitForSeconds to eliminate GC allocations during typewriter effects.
         // Using int millisecond keys to avoid floating-point precision issues in dictionary lookups.
         private static readonly Dictionary<int, WaitForSeconds> _waitCache = new Dictionary<int, WaitForSeconds>();
@@ -35,7 +31,6 @@ namespace Milehigh.World.Terminal
         private static WaitForSeconds GetWait(float seconds)
         {
             int ms = Mathf.RoundToInt(seconds * 1000f);
-            if (!_waitCache.TryGetValue(ms, out var wait))
             if (!_waitCache.TryGetValue(ms, out WaitForSeconds wait))
             {
                 wait = new WaitForSeconds(seconds);
@@ -72,8 +67,10 @@ namespace Milehigh.World.Terminal
 
         private void Update()
         {
+            if (commandInput == null || !commandInput.isFocused) return;
+
             // 🎨 Palette: Command History (Up Arrow) to recall previous input
-            if (commandInput != null && commandInput.isFocused && Input.GetKeyDown(KeyCode.UpArrow))
+            if (Input.GetKeyDown(KeyCode.UpArrow))
             {
                 if (!string.IsNullOrEmpty(_lastCommand))
                 {
@@ -81,42 +78,33 @@ namespace Milehigh.World.Terminal
                     commandInput.MoveTextEnd(false);
                 }
             }
+            // 🎨 Palette: Tab Completion for common commands
+            else if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                string currentText = commandInput.text.ToLower();
+                if (!string.IsNullOrEmpty(currentText))
+                {
+                    if ("help".StartsWith(currentText)) commandInput.text = "help";
+                    else if ("clear".StartsWith(currentText)) commandInput.text = "clear";
+                    commandInput.MoveTextEnd(false);
+                }
+            }
         }
 
         public void ProcessCommand(string input)
         {
-            // 🛡️ Sentinel: Early exit and basic echo for empty input.
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                WriteToTerminal("\n>");
-                if (commandInput != null)
-                {
-                    commandInput.text = "";
-                    commandInput.ActivateInputField();
-                }
-                return;
-            }
-
-            // UX Enhancement: Clear input and refocus immediately for better flow
-            if (commandInput != null)
-            {
-                commandInput.text = "";
-                commandInput.ActivateInputField();
-            }
-
+            // 🛡️ Sentinel: Early exit for empty or whitespace-only input.
             if (string.IsNullOrWhiteSpace(input))
             {
                 WriteToTerminal("\n<color=#888888>></color>");
+                CleanupInputAfterCommand();
                 return;
             }
 
             // 🛡️ Sentinel: Security - Strip Rich Text tags before echoing to prevent UI injection if validation fails.
             string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
 
-            // 🛡️ Sentinel: Input validation and DoS protection.
-            // 🛡️ Sentinel: Input validation and DoS protection
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection.
-            // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection (e.g. Rich Text tags).
             if (input.Length > MaxInputLength)
             {
                 WriteToTerminal($"\n<color=#888888>> {sanitizedInput.Substring(0, 16)}...</color>");
@@ -133,9 +121,6 @@ namespace Milehigh.World.Terminal
                 return;
             }
 
-            // 🎨 Palette: Echo user command to terminal.
-            // 🎨 Palette: Echo user command to terminal AFTER validation to ensure safe rendering.
-            // 🛡️ Sentinel: Ensures validated input is echoed, preventing UI injection via Rich Text tags.
             // 🎨 Palette: Echo validated user command to terminal.
             WriteToTerminal($"\n<color=#888888>> {input}</color>");
             CleanupInputAfterCommand();
@@ -157,7 +142,8 @@ namespace Milehigh.World.Terminal
                 WriteToTerminal("\n<color=#00FF00>[SYSTEM]</color>: <color=#FFFF00>Available Commands:</color>" +
                                 "\n - <color=#00FFFF>help</color>: Show this message." +
                                 "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
-                                "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands.");
+                                "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands." +
+                                "\n\n<color=#888888>Tip: Use [Up Arrow] for history and [Tab] for autocomplete.</color>");
                 return;
             }
 
@@ -218,11 +204,8 @@ namespace Milehigh.World.Terminal
                 outputDisplay.maxVisibleCharacters = startVisibleCount + i;
 
                 // 🎨 Palette: Rhythmic punctuation pauses for an "analog" terminal feel.
-                // We check the revealed character to pause after it appears.
-                // ⚡ Bolt: Consolidated rhythmic delay calculation to eliminate redundant resumptions.
-                // ⚡ Bolt: Calculate total delay for this character once to minimize coroutine resumptions.
                 char c = outputDisplay.textInfo.characterInfo[startVisibleCount + i - 1].character;
-                float totalDelay = typingSpeed;
+                float delay = typingSpeed;
 
                 if (c == '.' || c == '!' || c == '?')
                 {
@@ -236,21 +219,15 @@ namespace Milehigh.World.Terminal
                     if (isEndOfSentence)
                     {
                         bool isEllipsis = (c == '.' && startVisibleCount + i - 2 >= 0 && outputDisplay.textInfo.characterInfo[startVisibleCount + i - 2].character == '.');
-                        totalDelay += isEllipsis ? typingSpeed * 3f : punctuationDelay;
+                        delay += isEllipsis ? typingSpeed * 3f : punctuationDelay;
                     }
                 }
                 else if (c == ',' || c == ':' || c == ';')
                 {
-                    totalDelay += commaDelay;
-                }
-
-                // ⚡ Bolt: Single zero-allocation yield per character reveal.
-                yield return GetWait(totalDelay);
-                    delay = commaDelay;
+                    delay += commaDelay;
                 }
 
                 // ⚡ Bolt: Zero-allocation yield via shared cache
-                // UX Learning: Punctuation delays trigger after character is visible
                 yield return GetWait(delay);
             }
 

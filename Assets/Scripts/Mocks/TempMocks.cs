@@ -169,11 +169,7 @@ namespace UnityEngine
         public static bool GetKeyDown(KeyCode code) => false;
         public static bool GetMouseButtonDown(int button) => false;
     }
-    public enum KeyCode { Space, Return, UpArrow }
-    public static class Random
-    {
-        public static float Range(float min, float max) => 0;
-    }
+    public enum KeyCode { Space, Return, UpArrow, Tab }
 }
 
 namespace UnityEngine.UI
@@ -190,27 +186,20 @@ namespace TMPro
 {
     public class TMP_Text : UnityEngine.UI.Graphic
     {
-        public string text { get; set; } = "";
-    }
-    public class TextMeshProUGUI : UnityEngine.MonoBehaviour
-    {
         public virtual string text { get; set; } = "";
     }
+
     public class TextMeshProUGUI : TMP_Text
     {
         public override string text { get; set; } = "";
         public int maxVisibleCharacters { get; set; }
-        public string text { get; set; } = "";
         public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-    }
-    public class TextMeshProUGUI : TMP_Text
-    {
-        public int maxVisibleCharacters { get; set; }
         public void ForceMeshUpdate() {}
         public UnityEngine.Material fontMaterial { get; } = new UnityEngine.Material();
         public UnityEngine.RectTransform rectTransform { get; } = new UnityEngine.RectTransform();
         public UnityEngine.Color color { get; set; }
     }
+
     public class TMP_InputField : UnityEngine.UI.Selectable
     {
         public string text { get; set; } = "";
@@ -220,12 +209,8 @@ namespace TMPro
         public void MoveTextEnd(bool shift) {}
         public UnityEngine.Transform transform { get; } = new UnityEngine.Transform();
         public UnityEngine.UI.Graphic placeholder { get; set; }
-        public int characterLimit { get; set; }
     }
-    public class TMP_Text : UnityEngine.UI.Graphic
-    {
-        public string text { get; set; } = "";
-    }
+
     public class TMP_TextInfo
     {
         public int characterCount { get; set; }
