@@ -104,13 +104,22 @@ namespace Milehigh.World.Terminal
                 commandInput.ActivateInputField();
             }
 
-            if (string.IsNullOrWhiteSpace(input)) return;
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                WriteToTerminal("\n<color=#888888>></color>");
+                return;
+            }
 
+            // 🛡️ Sentinel: Security - Strip Rich Text tags before echoing to prevent UI injection if validation fails.
+            string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
+
+            // 🛡️ Sentinel: Input validation and DoS protection.
             // 🛡️ Sentinel: Input validation and DoS protection
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection.
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection (e.g. Rich Text tags).
             if (input.Length > MaxInputLength)
             {
+                WriteToTerminal($"\n<color=#888888>> {sanitizedInput.Substring(0, 16)}...</color>");
                 WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Input exceeds maximum length (256 characters).");
                 CleanupInputAfterCommand();
                 return;
@@ -118,24 +127,19 @@ namespace Milehigh.World.Terminal
 
             if (!SafeCommandRegex.IsMatch(input))
             {
+                WriteToTerminal($"\n<color=#888888>> {sanitizedInput}</color>");
                 WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Invalid characters. Use only A-Z, 0-9, spaces, '.', '_', and '-'.");
                 CleanupInputAfterCommand();
                 return;
             }
 
+            // 🎨 Palette: Echo user command to terminal.
             // 🎨 Palette: Echo user command to terminal AFTER validation to ensure safe rendering.
             // 🛡️ Sentinel: Ensures validated input is echoed, preventing UI injection via Rich Text tags.
             // 🎨 Palette: Echo validated user command to terminal.
             WriteToTerminal($"\n<color=#888888>> {input}</color>");
             CleanupInputAfterCommand();
             _lastCommand = input;
-
-            // UX Enhancement: Clear input and refocus immediately for better flow
-            if (commandInput != null)
-            {
-                commandInput.text = "";
-                commandInput.ActivateInputField();
-            }
 
             string[] parts = input.Trim().Split(' ');
             string command = parts[0].ToLower();
@@ -190,6 +194,7 @@ namespace Milehigh.World.Terminal
             if (_typewriterCoroutine != null)
             {
                 StopCoroutine(_typewriterCoroutine);
+                // UX Enhancement: Reveal full previous message when interrupted.
                 outputDisplay.maxVisibleCharacters = int.MaxValue;
             }
 
@@ -212,6 +217,8 @@ namespace Milehigh.World.Terminal
             {
                 outputDisplay.maxVisibleCharacters = startVisibleCount + i;
 
+                // 🎨 Palette: Rhythmic punctuation pauses for an "analog" terminal feel.
+                // We check the revealed character to pause after it appears.
                 // ⚡ Bolt: Consolidated rhythmic delay calculation to eliminate redundant resumptions.
                 // ⚡ Bolt: Calculate total delay for this character once to minimize coroutine resumptions.
                 char c = outputDisplay.textInfo.characterInfo[startVisibleCount + i - 1].character;
