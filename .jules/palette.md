@@ -9,3 +9,7 @@
 ## 2025-06-12 - [CLI Interaction Feedback]
 **Learning:** In terminal-style interfaces, mirroring (echoing) user input back into the scrollback buffer provides vital confirmation that the system received the command, especially when processing takes time.
 **Action:** Prepend a prompt symbol (e.g., `>`) and use a secondary color (e.g., gray) to distinguish user "echoes" from system responses.
+
+## 2025-06-12 - [Terminal Discoverability]
+**Learning:** Terminal-based interfaces suffer from low discoverability of power-user features like command history and tab completion. Placing subtle hints in the `help` command's output increases awareness without needing a persistent UI overlay.
+**Action:** Include a muted "Tip" line in system help responses to educate users on keyboard shortcuts.
