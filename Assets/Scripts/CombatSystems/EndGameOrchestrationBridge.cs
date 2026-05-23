@@ -18,6 +18,10 @@ namespace MilehighWorld.CombatSystems
 
         private static MaterialPropertyBlock? _propBlock;
 
+        // ⚡ Bolt: Cache shader property IDs to avoid string lookups in high-frequency loops.
+        private static readonly int VoidPulseRateId = Shader.PropertyToID("_VoidPulseRate");
+        private static readonly int EmissiveIntensityId = Shader.PropertyToID("_EmissiveIntensity");
+
         public async Task ExecuteDimensionalBridgeAsync(EncounterDirector director, LatticeSynchronizer synchronizer)
         {
             Debug.Log("<color=#E0BBE4>[SYSTEM]: Initiating End-Game Core Purgation State...</color>");
@@ -42,6 +46,26 @@ namespace MilehighWorld.CombatSystems
                 float voidVarianceDelta = 0.98f;
                 float parityResonance = 0.15f;
 
+                // ⚡ Bolt: Hoist ally lookups and component references outside the hot loop.
+                var yuna = director.GetAlly("Yuna");
+                var reverie = director.GetAlly("Reverie");
+                var zaia = director.GetAlly("Zaia");
+                var aeron = director.GetAlly("Aeron");
+
+                Rigidbody? aeronRB = null;
+                if (aeron != null && aeron.PrefabReference != null)
+                {
+                    aeronRB = aeron.PrefabReference.GetComponent<Rigidbody>();
+                    // ⚡ Bolt: Set mass once outside the loop as it remains constant during this phase.
+                    if (aeronRB != null) aeronRB.mass = 900.0f;
+                }
+
+                Renderer? targetRenderer = null;
+                if (delilahTargetMesh != null)
+                {
+                    delilahTargetMesh.TryGetComponent<Renderer>(out targetRenderer);
+                }
+
                 while (voidVarianceDelta > 0.001f)
                 {
                     // Real-Time database check to verify Anastasia's structural tracking integrity
@@ -52,27 +76,26 @@ namespace MilehighWorld.CombatSystems
                     }
 
                     // Execute Layer 1 Defense Subroutine (Dreamscape & Spatial Audio Sync)
-                    director.GetAlly("Yuna").UseAbility("Nine-Tailed Foxfire");
-                    director.GetAlly("Reverie").UseAbility("Arcane Symphony");
+                    if (yuna != null) yuna.UseAbility("Nine-Tailed Foxfire");
+                    if (reverie != null) reverie.UseAbility("Arcane Symphony");
 
                     // Execute Layer 2 Defense Subroutine (Rigidbody Collision & Mass Multipliers)
-                    var aeronRB = director.GetAlly("Aeron").PrefabReference.GetComponent<Rigidbody>();
-                    // Fix: Set mass to a fixed high value instead of multiplying every frame
-                    aeronRB.mass = 900.0f;
+                    // ⚡ Bolt: Removed redundant GetComponent and mass assignment from loop.
 
-                    director.GetAlly("Zaia").UseAbility("Spatial Warp");
+                    if (zaia != null) zaia.UseAbility("Spatial Warp");
 
                     // 4. Calculate Battle Calculations and decrement target entropy variables
                     voidVarianceDelta -= ingrisVanguard.PrefabReference != null ? 0.09f : 0.009f;
                     parityResonance += (1.0f - voidVarianceDelta) * 0.077f;
 
                     // Slow down shader pulse parameters on the target mesh using material overrides
-                    if (delilahTargetMesh != null && delilahTargetMesh.TryGetComponent<Renderer>(out var ren))
+                    // ⚡ Bolt: Use cached renderer and property IDs to eliminate per-frame lookups.
+                    if (targetRenderer != null)
                     {
-                        ren.GetPropertyBlock(_propBlock);
-                        _propBlock.SetFloat("_VoidPulseRate", voidVarianceDelta);
-                        _propBlock.SetFloat("_EmissiveIntensity", voidVarianceDelta * 3.0f);
-                        ren.SetPropertyBlock(_propBlock);
+                        targetRenderer.GetPropertyBlock(_propBlock);
+                        _propBlock.SetFloat(VoidPulseRateId, voidVarianceDelta);
+                        _propBlock.SetFloat(EmissiveIntensityId, voidVarianceDelta * 3.0f);
+                        targetRenderer.SetPropertyBlock(_propBlock);
                     }
 
                     await Task.Yield(); // Yield control to main game loop to preserve rendering frames
