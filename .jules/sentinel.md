@@ -75,3 +75,8 @@
 **Vulnerability:** A missing closing brace in a redundant scenario check within `HorizonGameData.cs` caused the C# compiler to skip subsequent character and scenario validation loops, effectively bypassing deep-validation for untrusted JSON data.
 **Learning:** Code rot, specifically orphaned or malformed conditional blocks, can lead to silent security failures where critical validation logic is bypassed without triggering immediate runtime errors.
 **Prevention:** Regularly audit validation logic for redundancy and ensure that all validation paths are fully covered by unit tests and static analysis. Favor clean, linear validation pipelines over complex, nested, or redundant checks.
+
+## 2025-05-18 - [IDOR Protection and Code Refactoring in SceneDirector]
+**Vulnerability:** The `ApplyInteraction` method in `SceneDirector.cs` had a incomplete IDOR blocklist and suffered from code rot (duplicate variable declarations and misplaced null checks), which could lead to `NullReferenceException` or unauthorized access to core system managers.
+**Learning:** Security validation must be the first line of defense in a method. Incomplete blocklists and redundant logic paths (code rot) can obscure security gaps and cause runtime failures.
+**Prevention:** Always place null checks and security validation at the very beginning of methods processing external data. Ensure the blocklist of sensitive system objects is comprehensive and includes all core managers and engines (e.g., `CombatManager`, `GlobalResonanceManager`, `BicameralBattleEngine`).
