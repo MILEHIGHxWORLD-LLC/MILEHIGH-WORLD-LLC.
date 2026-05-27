@@ -110,6 +110,7 @@ namespace Milehigh.World.Terminal
             // 🛡️ Sentinel: Security - Strip Rich Text tags before echoing to prevent UI injection if validation fails.
             string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
 
+            // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection (e.g. Rich Text tags).
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection.
             if (input.Length > MaxInputLength)
             {
@@ -235,7 +236,7 @@ namespace Milehigh.World.Terminal
                     totalDelay += commaDelay;
                 }
 
-                // ⚡ Bolt: Single zero-allocation yield per character reveal.
+                // ⚡ Bolt: Single zero-allocation yield per character reveal via shared cache.
                 yield return GetWait(totalDelay);
             }
 
