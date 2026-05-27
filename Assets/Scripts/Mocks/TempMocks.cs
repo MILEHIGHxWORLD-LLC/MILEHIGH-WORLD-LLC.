@@ -165,6 +165,7 @@ namespace UnityEngine
         public static bool GetKeyDown(KeyCode code) => false;
         public static bool GetMouseButtonDown(int button) => false;
     }
+    public enum KeyCode { Space, Return, UpArrow, Tab, DownArrow }
     public enum KeyCode { Space, Return, UpArrow, DownArrow, Tab }
     public enum KeyCode { Space, Return, UpArrow, Tab }
     public static class Random
@@ -187,6 +188,9 @@ namespace TMPro
 {
     public class TMP_Text : UnityEngine.UI.Graphic
     {
+        public virtual string text { get; set; } = "";
+        public int maxVisibleCharacters { get; set; }
+        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
         public string text { get; set; } = "";
         public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
         public int characterCount { get; set; }
@@ -200,6 +204,9 @@ namespace TMPro
         public UnityEngine.RectTransform rectTransform { get; } = new UnityEngine.RectTransform();
         public UnityEngine.Color color { get; set; }
         public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
+    }
+    public class TextMeshProUGUI : TMP_Text
+    {
     }
     public class TMP_InputField : UnityEngine.UI.Selectable
     {

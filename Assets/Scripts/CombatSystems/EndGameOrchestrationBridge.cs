@@ -18,6 +18,7 @@ namespace MilehighWorld.CombatSystems
 
         private static MaterialPropertyBlock? _propBlock;
 
+        // ⚡ Bolt: Cache shader property IDs to avoid string lookups in high-frequency loops.
         // ⚡ Bolt: Cache shader property IDs to avoid expensive string-to-int lookups in hot loops.
         // ⚡ Bolt: Cache shader property IDs to eliminate per-frame string-to-ID lookups.
         // ⚡ Bolt: Cache shader property IDs to avoid string-based lookups in the hot loop.
@@ -69,6 +70,11 @@ namespace MilehighWorld.CombatSystems
                 float voidVarianceDelta = 0.98f;
                 float parityResonance = 0.15f;
 
+                // ⚡ Bolt: Hoist ally lookups and component references outside the hot loop.
+                var yuna = director.GetAlly("Yuna");
+                var reverie = director.GetAlly("Reverie");
+                var zaia = director.GetAlly("Zaia");
+                var aeron = director.GetAlly("Aeron");
                 // ⚡ Bolt: Hoist redundant lookups and component fetches outside the hot loop.
                 // Estimated Performance Gain: Removes 4 dictionary lookups, 2 component fetches,
                 // and 2 string-to-ID conversions per frame.
@@ -82,6 +88,15 @@ namespace MilehighWorld.CombatSystems
                 if (aeron != null && aeron.PrefabReference != null)
                 {
                     aeronRB = aeron.PrefabReference.GetComponent<Rigidbody>();
+                    // ⚡ Bolt: Set mass once outside the loop as it remains constant during this phase.
+                    if (aeronRB != null) aeronRB.mass = 900.0f;
+                }
+
+                Renderer? targetRenderer = null;
+                if (delilahTargetMesh != null)
+                {
+                    delilahTargetMesh.TryGetComponent<Renderer>(out targetRenderer);
+                }
                 }
 
                 Renderer? delilahRenderer = null;
@@ -107,6 +122,13 @@ namespace MilehighWorld.CombatSystems
                     }
 
                     // Execute Layer 1 Defense Subroutine (Dreamscape & Spatial Audio Sync)
+                    if (yuna != null) yuna.UseAbility("Nine-Tailed Foxfire");
+                    if (reverie != null) reverie.UseAbility("Arcane Symphony");
+
+                    // Execute Layer 2 Defense Subroutine (Rigidbody Collision & Mass Multipliers)
+                    // ⚡ Bolt: Removed redundant GetComponent and mass assignment from loop.
+
+                    if (zaia != null) zaia.UseAbility("Spatial Warp");
                     // ⚡ Bolt: Using cached ally references to avoid repeated O(1) dictionary lookups.
                     yuna?.UseAbility("Nine-Tailed Foxfire");
                     reverie?.UseAbility("Arcane Symphony");
@@ -136,6 +158,13 @@ namespace MilehighWorld.CombatSystems
                     parityResonance += (1.0f - voidVarianceDelta) * 0.077f;
 
                     // Slow down shader pulse parameters on the target mesh using material overrides
+                    // ⚡ Bolt: Use cached renderer and property IDs to eliminate per-frame lookups.
+                    if (targetRenderer != null)
+                    {
+                        targetRenderer.GetPropertyBlock(_propBlock);
+                        _propBlock.SetFloat(VoidPulseRateId, voidVarianceDelta);
+                        _propBlock.SetFloat(EmissiveIntensityId, voidVarianceDelta * 3.0f);
+                        targetRenderer.SetPropertyBlock(_propBlock);
                     // ⚡ Bolt: Using cached Renderer and Property IDs for O(1) shader updates.
                     if (delilahRenderer != null)
                     {
