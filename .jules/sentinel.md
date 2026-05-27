@@ -76,6 +76,10 @@
 **Learning:** Code rot, specifically orphaned or malformed conditional blocks, can lead to silent security failures where critical validation logic is bypassed without triggering immediate runtime errors.
 **Prevention:** Regularly audit validation logic for redundancy and ensure that all validation paths are fully covered by unit tests and static analysis. Favor clean, linear validation pipelines over complex, nested, or redundant checks.
 
+## 2026-05-20 - Exhaustive IDOR Blocklisting for Core Managers
+**Vulnerability:** Incomplete IDOR blocklist in `SceneDirector.cs`.
+**Learning:** Initial security implementations for data-driven object interaction blocked some system managers (`CampaignManager`, `SceneDirector`) but missed others (`CombatManager`, `GlobalResonanceManager`, `BicameralBattleEngine`). This left critical game state vulnerable to unauthorized manipulation via external campaign data.
+**Prevention:** When implementing a blocklist for sensitive architectural components, ensure it is exhaustive and regularly audited as new managers are added to the codebase.
 ## 2025-05-18 - [IDOR Protection and Code Refactoring in SceneDirector]
 **Vulnerability:** The `ApplyInteraction` method in `SceneDirector.cs` had a incomplete IDOR blocklist and suffered from code rot (duplicate variable declarations and misplaced null checks), which could lead to `NullReferenceException` or unauthorized access to core system managers.
 **Learning:** Security validation must be the first line of defense in a method. Incomplete blocklists and redundant logic paths (code rot) can obscure security gaps and cause runtime failures.
