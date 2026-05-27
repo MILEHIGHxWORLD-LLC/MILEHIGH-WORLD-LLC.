@@ -26,6 +26,9 @@ namespace Milehigh.World.Terminal
         private string _lastCommand = "";
         private readonly string[] _availableCommands = { "help", "clear" };
 
+        // 🎨 Palette: Available commands for autocomplete
+        private static readonly string[] ValidCommands = { "help", "clear" };
+
         // ⚡ Bolt: Shared cache for WaitForSeconds to eliminate GC allocations during typewriter effects.
         // Using int millisecond keys to avoid floating-point precision issues in dictionary lookups.
         private static readonly Dictionary<int, WaitForSeconds> _waitCache = new Dictionary<int, WaitForSeconds>();
@@ -80,6 +83,20 @@ namespace Milehigh.World.Terminal
                     commandInput.MoveTextEnd(false);
                 }
             }
+            // 🎨 Palette: Tab Completion for discoverable commands
+            else if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                string currentText = commandInput.text.Trim().ToLower();
+                if (!string.IsNullOrEmpty(currentText))
+                {
+                    foreach (string cmd in ValidCommands)
+                    {
+                        if (cmd.StartsWith(currentText))
+                        {
+                            commandInput.text = cmd;
+                            commandInput.MoveTextEnd(false);
+                            break;
+                        }
 
             // 🎨 Palette: Tab Completion
             if (Input.GetKeyDown(KeyCode.Tab))
@@ -150,6 +167,7 @@ namespace Milehigh.World.Terminal
                                 "\n - <color=#00FFFF>help</color>: Show this message." +
                                 "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
                                 "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands." +
+                                "\n <color=#888888>(Tip: Use Tab for autocomplete and Up Arrow for history)</color>");
                                 "\n<color=#888888><i>(Tip: Use Tab for auto-completion and Up Arrow for history)</i></color>");
                 return;
             }
