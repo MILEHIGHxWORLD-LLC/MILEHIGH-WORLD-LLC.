@@ -4,6 +4,7 @@ using TMPro;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Collections;
+using System.Linq;
 
 namespace Milehigh.World.Terminal
 {
@@ -23,6 +24,7 @@ namespace Milehigh.World.Terminal
 
         private Coroutine? _typewriterCoroutine;
         private string _lastCommand = "";
+        private readonly string[] _availableCommands = { "help", "clear" };
 
         // 🎨 Palette: Available commands for autocomplete
         private static readonly string[] ValidCommands = { "help", "clear" };
@@ -95,6 +97,18 @@ namespace Milehigh.World.Terminal
                             commandInput.MoveTextEnd(false);
                             break;
                         }
+
+            // 🎨 Palette: Tab Completion
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                string currentInput = commandInput.text.Trim().ToLower();
+                if (!string.IsNullOrEmpty(currentInput))
+                {
+                    string? match = _availableCommands.FirstOrDefault(c => c.StartsWith(currentInput));
+                    if (match != null)
+                    {
+                        commandInput.text = match;
+                        commandInput.MoveTextEnd(false);
                     }
                 }
             }
@@ -113,6 +127,7 @@ namespace Milehigh.World.Terminal
             // 🛡️ Sentinel: Security - Strip Rich Text tags before echoing to prevent UI injection if validation fails.
             string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
 
+            // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection (e.g. Rich Text tags).
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection.
             if (input.Length > MaxInputLength)
             {
@@ -153,6 +168,7 @@ namespace Milehigh.World.Terminal
                                 "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
                                 "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands." +
                                 "\n <color=#888888>(Tip: Use Tab for autocomplete and Up Arrow for history)</color>");
+                                "\n<color=#888888><i>(Tip: Use Tab for auto-completion and Up Arrow for history)</i></color>");
                 return;
             }
 
@@ -214,6 +230,7 @@ namespace Milehigh.World.Terminal
 
                 // 🎨 Palette: Rhythmic punctuation pauses for an "analog" terminal feel.
                 // We check the revealed character to pause after it appears.
+                // ⚡ Bolt: Calculate total delay for this character once to minimize coroutine resumptions.
                 char c = outputDisplay.textInfo.characterInfo[startVisibleCount + i - 1].character;
                 float totalDelay = typingSpeed;
 
@@ -237,7 +254,7 @@ namespace Milehigh.World.Terminal
                     totalDelay += commaDelay;
                 }
 
-                // ⚡ Bolt: Single zero-allocation yield per character reveal.
+                // ⚡ Bolt: Single zero-allocation yield per character reveal via shared cache.
                 yield return GetWait(totalDelay);
             }
 
