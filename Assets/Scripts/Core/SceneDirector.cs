@@ -165,6 +165,8 @@ namespace Milehigh.Core
 
             // 🛡️ Sentinel: Prevent Insecure Direct Object Reference (IDOR) by sanitizing untrusted external object IDs.
             // Block critical system managers and architectural singletons from being manipulated via external data.
+            // 🛡️ Sentinel: Prevent Insecure Direct Object Reference (IDOR) by sanitizing untrusted external object IDs
+            // We block core architectural singletons from being manipulated via external data.
             if (interaction.objectId == "CampaignManager" || interaction.objectId == "SceneDirector" ||
                 interaction.objectId == "CameraManager" || interaction.objectId == "AlliancePowerManager" ||
                 interaction.objectId == "CombatManager" || interaction.objectId == "GlobalResonanceManager" ||
