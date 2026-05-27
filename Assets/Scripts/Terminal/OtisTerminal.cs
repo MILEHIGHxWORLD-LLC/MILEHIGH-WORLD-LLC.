@@ -85,6 +85,8 @@ namespace Milehigh.World.Terminal
         {
             if (commandInput == null || !commandInput.isFocused) return;
 
+            // 🎨 Palette: Command History (Up Arrow) to recall previous input
+            if (Input.GetKeyDown(KeyCode.UpArrow))
             // 🎨 Palette: Command History (Up/Down Arrow) to recall previous inputs
             if (Input.GetKeyDown(KeyCode.UpArrow) && _commandHistory.Count > 0)
             {
@@ -181,8 +183,22 @@ namespace Milehigh.World.Terminal
             {
                 newIndex = 0;
             }
-        }
 
+            // 🎨 Palette: Tab Completion for common commands
+            if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                string currentText = commandInput.text.ToLower();
+                if (currentText.StartsWith("h") && !"help".StartsWith(currentText)) { /* already help or something else */ }
+                else if ("help".StartsWith(currentText))
+                {
+                    commandInput.text = "help";
+                    commandInput.MoveTextEnd(false);
+                }
+                else if ("clear".StartsWith(currentText))
+                {
+                    commandInput.text = "clear";
+                    commandInput.MoveTextEnd(false);
+                }
         public void ProcessCommand(string input)
         {
             // 🎨 Palette: Reset history index on command submission
@@ -310,6 +326,7 @@ namespace Milehigh.World.Terminal
                                 "\n - <color=#00FFFF>help</color>: Show this message." +
                                 "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
                                 "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands." +
+                                "\n <color=#888888>Tip: Use Up Arrow for history and Tab for completion.</color>");
                                 "\n<color=#888888>Tip: Use Tab for completion, Up/Down for history.</color>");
                                 "\n <color=#888888>Tip: Use [Tab] to autocomplete, [Up] for history, [Down] to clear.</color>");
                                 "\n <color=#888888>Tip: Use Up/Down arrows to navigate command history.</color>");
@@ -400,6 +417,8 @@ namespace Milehigh.World.Terminal
                     totalDelay += commaDelay;
                 }
 
+                // ⚡ Bolt: Zero-allocation yield via shared cache
+                // UX Learning: Punctuation delays trigger after character is visible
                 // ⚡ Bolt: Single zero-allocation yield per character reveal via shared cache.
                 yield return GetWait(totalDelay);
             }

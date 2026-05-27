@@ -197,6 +197,8 @@ namespace TMPro
         public virtual string text { get; set; } = "";
         public int maxVisibleCharacters { get; set; }
         public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
+        public int maxVisibleCharacters { get; set; }
+        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
         public void ForceMeshUpdate() {}
     }
     public class TextMeshProUGUI : TMP_Text
@@ -222,6 +224,10 @@ namespace TMPro
         public void ForceMeshUpdate() {}
         public UnityEngine.Material fontMaterial { get; } = new UnityEngine.Material();
         public UnityEngine.RectTransform rectTransform { get; } = new UnityEngine.RectTransform();
+    }
+    public class TextMeshProUGUI : TMP_Text
+    {
+        public override string text { get; set; } = "";
         public UnityEngine.Color color { get; set; }
         public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
     }
