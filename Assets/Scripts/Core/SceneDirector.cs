@@ -161,6 +161,9 @@ namespace Milehigh.Core
 
         private void ApplyInteraction(ObjectInteraction interaction)
         {
+            // 🛡️ Sentinel: Defensive programming and IDOR protection.
+            if (interaction == null || string.IsNullOrEmpty(interaction.objectId)) return;
+
             // 🛡️ Sentinel: Defensive programming - ensure interaction and objectId are not null.
             if (interaction == null || string.IsNullOrEmpty(interaction.objectId)) return;
 
