@@ -23,9 +23,10 @@ namespace Milehigh.World.Terminal
         private static readonly Regex SafeCommandRegex = new Regex(@"^[a-zA-Z0-9\s._\-]+$", RegexOptions.Compiled);
 
         private Coroutine? _typewriterCoroutine;
-        private List<string> _commandHistory = new List<string>();
+        private readonly List<string> _commandHistory = new List<string>();
         private int _historyIndex = -1;
 
+        private string _lastCommand = "";
         private static readonly string[] _availableCommands = { "help", "clear" };
 
         // ⚡ Bolt: Shared cache for WaitForSeconds to eliminate GC allocations during typewriter effects.
@@ -76,6 +77,10 @@ namespace Milehigh.World.Terminal
             if (Input.GetKeyDown(KeyCode.UpArrow))
             {
                 if (_commandHistory.Count > 0)
+            // 🎨 Palette: Command History Navigation
+            if (Input.GetKeyDown(KeyCode.UpArrow))
+            {
+                if (_commandHistory.Count > 0 && _historyIndex < _commandHistory.Count - 1)
                 {
                     _historyIndex = Mathf.Clamp(_historyIndex + 1, 0, _commandHistory.Count - 1);
                     commandInput.text = _commandHistory[_commandHistory.Count - 1 - _historyIndex];
@@ -89,13 +94,26 @@ namespace Milehigh.World.Terminal
                 commandInput.MoveTextEnd(false);
             }
             // 🎨 Palette: Tab Completion for common commands
+                if (_historyIndex > 0)
+                {
+                    _historyIndex--;
+                    commandInput.text = _commandHistory[_commandHistory.Count - 1 - _historyIndex];
+                    commandInput.MoveTextEnd(false);
+                }
+                else if (_historyIndex == 0)
+                {
+                    _historyIndex = -1;
+                    commandInput.text = "";
+                }
+            }
+            // 🎨 Palette: Tab Completion
             else if (Input.GetKeyDown(KeyCode.Tab))
             {
                 string currentInput = commandInput.text.Trim().ToLower();
                 if (!string.IsNullOrEmpty(currentInput))
                 {
-                    string? match = _availableCommands.FirstOrDefault(c => c.StartsWith(currentInput));
-                    if (match != null)
+                    string match = _availableCommands.FirstOrDefault(c => c.StartsWith(currentInput));
+                    if (!string.IsNullOrEmpty(match))
                     {
                         commandInput.text = match;
                         commandInput.MoveTextEnd(false);
@@ -179,7 +197,51 @@ namespace Milehigh.World.Terminal
             {
                 WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: <color=#FF0000>Unknown command: '{parts[0]}'. Type <color=#00FFFF>'help'</color> for options.</color>");
                 StartCoroutine(ShakeInputField());
+                string suggestion = GetFuzzyMatch(parts[0]);
+                string suggestionText = !string.IsNullOrEmpty(suggestion) ? $" Did you mean <color=#00FFFF>'{suggestion}'</color>?" : "";
+                WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: <color=#FF0000>Unknown command: '{parts[0]}'.{suggestionText} Type <color=#00FFFF>'help'</color> for options.</color>");
+                if (commandInput != null) StartCoroutine(ShakeInputField());
             }
+        }
+
+        private string GetFuzzyMatch(string input)
+        {
+            string bestMatch = "";
+            int minDistance = 3; // Max distance for a suggestion
+
+            foreach (string cmd in _availableCommands)
+            {
+                int dist = GetLevenshteinDistance(input.ToLower(), cmd);
+                if (dist < minDistance)
+                {
+                    minDistance = dist;
+                    bestMatch = cmd;
+                }
+            }
+            return bestMatch;
+        }
+
+        private int GetLevenshteinDistance(string s, string t)
+        {
+            int n = s.Length;
+            int m = t.Length;
+            int[,] d = new int[n + 1, m + 1];
+
+            if (n == 0) return m;
+            if (m == 0) return n;
+
+            for (int i = 0; i <= n; d[i, 0] = i++) ;
+            for (int j = 0; j <= m; d[0, j] = j++) ;
+
+            for (int i = 1; i <= n; i++)
+            {
+                for (int j = 1; j <= m; j++)
+                {
+                    int cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
+                    d[i, j] = Mathf.Min(Mathf.Min(d[i - 1, j] + 1, d[i, j - 1] + 1), d[i - 1, j - 1] + cost);
+                }
+            }
+            return d[n, m];
         }
 
         private void CleanupInputAfterCommand()
@@ -245,6 +307,11 @@ namespace Milehigh.World.Terminal
 
                 // ⚡ Bolt: Single zero-allocation yield per character reveal via shared cache.
                 yield return GetWait(totalDelay);
+                    delay += commaDelay;
+                }
+
+                // ⚡ Bolt: Zero-allocation yield via shared cache
+                yield return GetWait(delay);
             }
 
             _typewriterCoroutine = null;
