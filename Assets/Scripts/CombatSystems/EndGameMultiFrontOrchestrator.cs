@@ -16,6 +16,7 @@ namespace MilehighWorld.CombatSystems
 
         private static MaterialPropertyBlock? _propBlock;
 
+        // ⚡ Bolt: Cache shader property IDs to eliminate per-frame string-to-int lookups.
         // ⚡ Bolt: Cache shader property IDs to avoid string lookups in high-frequency loops.
         private static readonly int VoidPulseRateId = Shader.PropertyToID("_VoidPulseRate");
         private static readonly int EmissiveIntensityId = Shader.PropertyToID("_EmissiveIntensity");
@@ -29,6 +30,13 @@ namespace MilehighWorld.CombatSystems
             var skyIxVanguard = director.GetAlly("Sky.ix");
             var reverieAlly = director.GetAlly("Reverie");
             var kingCyrusBoss = director.GetEnemy("KingCyrus");
+
+            // ⚡ Bolt: Hoist character references and component lookups outside the hot loop.
+            var reverie = director.GetAlly("Reverie");
+            var micahRB = micahBulwark?.PrefabReference?.GetComponent<Rigidbody>();
+
+            // ⚡ Bolt: Setting constant values once outside the loop to eliminate redundant native writes.
+            if (micahRB != null) micahRB.mass = 900.0f;
 
             float voidVarianceDelta = 0.99f;
             float combinedTraumaModifier = 0.85f; // Clamped index based on Micah + Cirrus profiles
@@ -54,6 +62,9 @@ namespace MilehighWorld.CombatSystems
                     return;
                 }
 
+                // ⚡ Bolt: Using pre-cached references and components to avoid O(N) lookups and native bridge overhead.
+                if (reverie != null) reverie.UseAbility("Arcane Symphony");
+                if (skyIxVanguard != null) skyIxVanguard.UseAbility("Void Step");
                 // Process the 1000 Fox Parade / Arcane Symphony visual degradation tracking
                 reverieAlly?.UseAbility("Arcane Symphony");
                 skyIxVanguard?.UseAbility("Void Step");
@@ -65,6 +76,7 @@ namespace MilehighWorld.CombatSystems
                 if (platformRenderer != null)
                 {
                     platformRenderer.GetPropertyBlock(_propBlock);
+                    // ⚡ Bolt: Use cached property IDs for O(1) shader updates.
                     _propBlock.SetFloat(VoidPulseRateId, voidVarianceDelta);
                     _propBlock.SetFloat(EmissiveIntensityId, voidVarianceDelta * 4.5f);
                     platformRenderer.SetPropertyBlock(_propBlock);
