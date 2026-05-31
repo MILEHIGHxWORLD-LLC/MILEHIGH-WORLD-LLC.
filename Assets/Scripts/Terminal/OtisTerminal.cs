@@ -23,6 +23,10 @@ namespace Milehigh.World.Terminal
         private static readonly Regex SafeCommandRegex = new Regex(@"^[a-zA-Z0-9\s._\-]+$", RegexOptions.Compiled);
 
         private Coroutine? _typewriterCoroutine;
+        private List<string> _commandHistory = new List<string>();
+        private int _historyIndex = -1;
+        private string _lastCommand = "";
+        private readonly string[] _availableCommands = { "help", "clear", "infiniteration" };
         private readonly List<string> _commandHistory = new List<string>();
         private int _historyIndex = -1;
 
@@ -52,6 +56,7 @@ namespace Milehigh.World.Terminal
                 {
                     placeholderText.text = "Enter command...";
                 }
+                commandInput.onSubmit.AddListener(ProcessCommand);
             }
 
             if (outputDisplay != null)
@@ -76,6 +81,45 @@ namespace Milehigh.World.Terminal
             // 🎨 Palette: Command History Navigation (Up/Down Arrows)
             if (Input.GetKeyDown(KeyCode.UpArrow))
             {
+                NavigateHistory(-1);
+            }
+            else if (Input.GetKeyDown(KeyCode.DownArrow))
+            {
+                NavigateHistory(1);
+            }
+            // 🎨 Palette: Tab Completion for common commands
+            else if (Input.GetKeyDown(KeyCode.Tab))
+            {
+                string currentText = commandInput.text.ToLower();
+                if (!string.IsNullOrEmpty(currentText))
+                {
+                    string? match = _availableCommands.FirstOrDefault(c => c.StartsWith(currentText));
+                    if (match != null && match != currentText)
+                    {
+                        commandInput.text = match;
+                        commandInput.MoveTextEnd(false);
+                    }
+                }
+            }
+        }
+
+        private void NavigateHistory(int direction)
+        {
+            if (_commandHistory.Count == 0) return;
+
+            // direction -1 is Up (older), +1 is Down (newer)
+            int newIndex = _historyIndex == -1 ? _commandHistory.Count - 1 : _historyIndex + direction;
+
+            if (newIndex >= 0 && newIndex < _commandHistory.Count)
+            {
+                _historyIndex = newIndex;
+                commandInput.text = _commandHistory[_historyIndex];
+                commandInput.MoveTextEnd(false);
+            }
+            else if (newIndex >= _commandHistory.Count)
+            {
+                _historyIndex = -1;
+                commandInput.text = "";
                 if (_commandHistory.Count > 0)
             // 🎨 Palette: Command History Navigation
             if (Input.GetKeyDown(KeyCode.UpArrow))
@@ -137,16 +181,16 @@ namespace Milehigh.World.Terminal
             // 🛡️ Sentinel: Input validation and DoS protection BEFORE echoing to prevent UI injection.
             if (input.Length > MaxInputLength)
             {
-                WriteToTerminal($"\n<color=#888888>> {sanitizedInput.Substring(0, 16)}...</color>");
-                WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Input exceeds maximum length (256 characters).");
+                WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Input exceeds maximum length.");
                 CleanupInputAfterCommand();
                 return;
             }
 
             if (!SafeCommandRegex.IsMatch(input))
             {
+                string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
                 WriteToTerminal($"\n<color=#888888>> {sanitizedInput}</color>");
-                WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Invalid characters. Use only A-Z, 0-9, spaces, '.', '_', and '-'.");
+                WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Invalid characters detected.");
                 CleanupInputAfterCommand();
                 return;
             }
@@ -170,6 +214,7 @@ namespace Milehigh.World.Terminal
                 outputDisplay.text = "";
                 outputDisplay.maxVisibleCharacters = 0;
                 WriteToTerminal("<color=#00FF00>[SYSTEM]</color>: OTIS Terminal Online. Type 'help' for commands.");
+                CleanupInputAfterCommand();
                 return;
             }
 
@@ -177,12 +222,24 @@ namespace Milehigh.World.Terminal
             {
                 WriteToTerminal("\n<color=#00FF00>[SYSTEM]</color>: <color=#FFFF00>Available Commands:</color>" +
                                 "\n - <color=#00FFFF>help</color>: Show this message." +
+                                "\n - <color=#00FFFF>clear</color>: Clear terminal." +
+                                "\n - <color=#00FFFF>infiniteration</color>: Execute engine algorithm." +
+                                "\n\n<color=#888888>Shortcuts: [Tab] Completion, [Up/Down] History</color>");
+                CleanupInputAfterCommand();
                                 "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
                                 "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands." +
                                 "\n\n<color=#888888>Shortcuts: [Tab] Completion, [Up/Down] History</color>");
                 return;
             }
 
+            if (command == "infiniteration")
+            {
+                ExecuteInfiniteration();
+                CleanupInputAfterCommand();
+                return;
+            }
+
+            // Extended commands
             if (parts.Length >= 3)
             {
                 int index = input.IndexOf(parts[2]);
@@ -195,6 +252,7 @@ namespace Milehigh.World.Terminal
             }
             else
             {
+                WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: <color=#FF0000>Unknown command: '{parts[0]}'.</color>");
                 WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: <color=#FF0000>Unknown command: '{parts[0]}'. Type <color=#00FFFF>'help'</color> for options.</color>");
                 StartCoroutine(ShakeInputField());
                 string suggestion = GetFuzzyMatch(parts[0]);
@@ -202,6 +260,17 @@ namespace Milehigh.World.Terminal
                 WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: <color=#FF0000>Unknown command: '{parts[0]}'.{suggestionText} Type <color=#00FFFF>'help'</color> for options.</color>");
                 if (commandInput != null) StartCoroutine(ShakeInputField());
             }
+
+            CleanupInputAfterCommand();
+        }
+
+        private void ExecuteInfiniteration()
+        {
+            string sequence = "108-99-90-81-72-63-54-45-36-27-18-09-108";
+            WriteToTerminal($"\n<color=#00FF00>[ENGINE]</color>: Initializing Infiniteration Engine..." +
+                            $"\n<color=#FFFF00>Sequence:</color> {sequence}" +
+                            $"\n<color=#FFFF00>Digital Root:</color> 9" +
+                            $"\n<color=#00FFFF>[STATUS]</color>: Loop Closed. 12-11-10...01-012");
         }
 
         private string GetFuzzyMatch(string input)
