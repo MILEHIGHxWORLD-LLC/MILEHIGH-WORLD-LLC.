@@ -13,6 +13,14 @@ namespace Milehigh.Core
         public List<GameObject> characterPrefabs = new List<GameObject>();
         public Transform characterSpawnRoot = null!;
 
+        // 🛡️ Sentinel: Hardened blocklist to prevent Insecure Direct Object Reference (IDOR) attacks on critical system managers.
+        private static readonly HashSet<string> ProtectedSystemObjects = new HashSet<string>
+        {
+            "CampaignManager", "SceneDirector", "CameraManager", "AlliancePowerManager",
+            "CombatManager", "GlobalResonanceManager", "BicameralBattleEngine",
+            "SkyIxController", "CinematicController", "TimelineSimulationEngine"
+        };
+
         private Dictionary<string, GameObject?> _objectCache = new Dictionary<string, GameObject?>();
         private Dictionary<string, GameObject?> _prefabCache = new Dictionary<string, GameObject?>();
         private Dictionary<int, CharacterControllerBase?> _controllerCache = new Dictionary<int, CharacterControllerBase?>();
@@ -177,6 +185,10 @@ namespace Milehigh.Core
                 interaction.objectId == "SkyIxController" ||
                 interaction.objectId == "CinematicController" ||
                 interaction.objectId == "TimelineSimulationEngine")
+            // 🛡️ Sentinel: Consolidate redundant checks and implement hardened IDOR protection.
+            if (interaction == null || string.IsNullOrEmpty(interaction.objectId)) return;
+
+            if (ProtectedSystemObjects.Contains(interaction.objectId))
             {
                 Debug.LogError($"[Security] Blocked unauthorized interaction attempt to system object: {interaction.objectId}");
                 return;
