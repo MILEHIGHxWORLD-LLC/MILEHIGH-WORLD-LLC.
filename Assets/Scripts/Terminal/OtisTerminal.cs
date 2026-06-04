@@ -28,6 +28,8 @@ namespace Milehigh.World.Terminal
 
         private readonly List<string> _commandHistory = new List<string>();
         private int _historyIndex = -1;
+        private string _lastCommand = "";
+        private static readonly string[] _availableCommands = { "help", "clear", "history" };
         private List<string> _commandHistory = new List<string>();
         private int _historyIndex = -1;
 
@@ -71,6 +73,14 @@ namespace Milehigh.World.Terminal
             {
                 commandInput.ActivateInputField();
             }
+        }
+
+        private void ClearTerminal()
+        {
+            if (outputDisplay == null) return;
+            outputDisplay.text = "";
+            outputDisplay.maxVisibleCharacters = 0;
+            WriteToTerminal("<color=#00FF00>[SYSTEM]</color>: OTIS Terminal Online. Type 'help' for commands.");
         }
 
         private void Update()
@@ -141,6 +151,16 @@ namespace Milehigh.World.Terminal
                         commandInput.MoveTextEnd(false);
                     }
                 }
+            }
+            // 🎨 Palette: Escape to Clear Current Line
+            else if (Input.GetKeyDown(KeyCode.Escape))
+            {
+                commandInput.text = "";
+            }
+            // 🎨 Palette: Ctrl+L to Clear Terminal
+            else if (Input.GetKeyDown(KeyCode.L) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+                ClearTerminal();
             }
             else
             {
@@ -264,6 +284,17 @@ namespace Milehigh.World.Terminal
             if (command == "clear")
             {
                 ClearTerminal();
+                return;
+            }
+
+            if (command == "history")
+            {
+                string historyOutput = "\n<color=#00FF00>[SYSTEM]</color>: <color=#FFFF00>Command History:</color>";
+                for (int i = 0; i < _commandHistory.Count; i++)
+                {
+                    historyOutput += $"\n {i}: <color=#00FFFF>{_commandHistory[i]}</color>";
+                }
+                WriteToTerminal(historyOutput);
                 CleanupInputAfterCommand();
                 return;
             }
@@ -286,6 +317,8 @@ namespace Milehigh.World.Terminal
                                 "\n\n<color=#888888>Shortcuts: [Tab] Completion, [Up/Down] History, [Esc] Clear Line, [Ctrl+L] Clear Screen</color>");
                                 "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
                                 "\n - <color=#00FFFF>history</color>: Show command history." +
+                                "\n - <color=#00FFFF>[cmd] [arg1] [arg2]</color>: Execute extended system commands." +
+                                "\n\n<color=#888888>Shortcuts: [Tab] Complete, [Up/Down] History, [Ctrl+L] Clear, [Esc] Reset</color>");
                                 "\n - <color=#00FFFF>infiniteration</color>: Execute engine algorithm." +
                                 "\n\n<color=#888888>Shortcuts: [Tab] Completion, [Up/Down] History, [Esc] Clear Line, [Ctrl+L] Clear Screen</color>");
                 CleanupInputAfterCommand();
