@@ -16,6 +16,7 @@ namespace MilehighWorld.CombatSystems
 
         private static MaterialPropertyBlock? _propBlock;
 
+        // ⚡ Bolt: Pre-cache shader property IDs to eliminate string hashing overhead in the hot loop.
         // ⚡ Bolt: Cache shader property IDs to eliminate per-frame string-to-int lookups in high-frequency loops.
         // ⚡ Bolt: Cache shader property IDs to avoid string lookups in the hot loop.
         // ⚡ Bolt: Cache shader property IDs to eliminate per-frame string-to-int lookups.
@@ -32,6 +33,14 @@ namespace MilehighWorld.CombatSystems
             var skyIxVanguard = director.GetAlly("Sky.ix");
             var kingCyrusBoss = director.GetEnemy("KingCyrus");
 
+            // ⚡ Bolt: Hoist constant lookups and component fetches outside the hot loop.
+            var reverieAlly = director.GetAlly("Reverie");
+            Rigidbody? squadMassOverride = (micahBulwark?.PrefabReference != null)
+                ? micahBulwark.PrefabReference.GetComponent<Rigidbody>()
+                : null;
+
+            // ⚡ Bolt: Set constant property values once outside the loop.
+            if (squadMassOverride != null) squadMassOverride.mass = 900.0f;
             Rigidbody? micahRB = (micahBulwark?.PrefabReference != null) ? micahBulwark.PrefabReference.GetComponent<Rigidbody>() : null;
             // ⚡ Bolt: Hoist character references and component lookups outside the hot loop.
             var reverie = director.GetAlly("Reverie");
@@ -83,6 +92,11 @@ namespace MilehighWorld.CombatSystems
                     return;
                 }
 
+                // ⚡ Bolt: Removed redundant GetComponent and mass assignment from loop.
+
+                // Process the 1000 Fox Parade / Arcane Symphony visual degradation tracking
+                // ⚡ Bolt: Using cached ally reference to avoid repeated O(1) dictionary lookups.
+                if (reverieAlly != null) reverieAlly.UseAbility("Arcane Symphony");
                 // ⚡ Bolt: Using pre-cached references to avoid O(N) lookups and native bridge overhead.
                 reverieAlly?.UseAbility("Arcane Symphony");
                 skyIxVanguard?.UseAbility("Void Step");
@@ -98,6 +112,11 @@ namespace MilehighWorld.CombatSystems
                 // Decrement global variance based on local structural shard completion
                 voidVarianceDelta -= 0.11f;
 
+                // Real-time update to HDRP custom material instances via property IDs
+                // ⚡ Bolt: Using cached Renderer and Property IDs for O(1) shader updates.
+                if (platformRenderer != null)
+                {
+                    platformRenderer.GetPropertyBlock(_propBlock);
                 // ⚡ Bolt: Use cached Property IDs and MaterialPropertyBlock for efficient shader updates.
                 if (platformRenderer != null)
                 {
