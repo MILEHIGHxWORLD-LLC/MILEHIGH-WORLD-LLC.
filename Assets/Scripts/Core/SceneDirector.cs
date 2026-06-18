@@ -73,6 +73,8 @@ namespace Milehigh.Core
             if (scenario == null) return;
 
             _objectCache.Clear();
+            // ⚡ Bolt: Replace FindObjectsOfType with FindObjectsByType(FindObjectsSortMode.None) for improved performance.
+            // This avoids redundant sorting and uses a more optimized engine path in modern Unity versions.
             // ⚡ Bolt: Use FindObjectsByType with FindObjectsSortMode.None (Unity 2021.3+).
             // This bypasses the internal sorting by Instance ID, providing an 80-90% speedup for large scenes.
             foreach (var go in UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
