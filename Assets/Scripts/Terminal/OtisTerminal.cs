@@ -123,12 +123,15 @@ namespace Milehigh.World.Terminal
         private void HandleTabCompletion()
         {
             string currentInput = commandInput.text.Trim().ToLower();
+
+            // 🎨 Palette: If input is empty, use the last fuzzy-match suggestion
             if (string.IsNullOrEmpty(currentInput))
             {
                 if (!string.IsNullOrEmpty(_lastSuggestion))
                 {
                     commandInput.text = _lastSuggestion;
                     commandInput.MoveTextEnd(false);
+                    _lastSuggestion = ""; // Clear after use
                 }
                 return;
             }
@@ -234,6 +237,15 @@ namespace Milehigh.World.Terminal
 
         private void HandleUnknownCommand(string command)
         {
+            _lastSuggestion = GetFuzzyMatch(command);
+            bool hasSuggestion = !string.IsNullOrEmpty(_lastSuggestion);
+            string suggestionText = hasSuggestion ? $" Did you mean <color=#00FFFF>'{_lastSuggestion}'</color>?" : "";
+            string tip = hasSuggestion
+                ? "Press [Tab] to accept suggestion, or type 'help' for options."
+                : "Use [Tab] to auto-complete commands, or type 'help' for options.";
+
+            WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: <color=#FF0000>Unknown command: '{command}'.{suggestionText}</color>" +
+                $"\n<color=#AAAAAA>Tip: {tip}</color>");
             string suggestion = GetFuzzyMatch(command);
             _lastSuggestion = suggestion;
             string suggestionText = !string.IsNullOrEmpty(suggestion) ? $" Did you mean <color=#00FFFF>'{suggestion}'</color>?" : "";
