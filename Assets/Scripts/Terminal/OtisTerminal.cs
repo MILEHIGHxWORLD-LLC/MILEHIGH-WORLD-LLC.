@@ -425,6 +425,11 @@ namespace Milehigh.World.Terminal
         private void DisplayHelp()
         {
             WriteToTerminal("\n<color=#00FF00>[SYSTEM]</color>: <color=#FFFF00>Available Commands:</color>" +
+                "\n - <color=#00FFFF>help</color>: Show this message." +
+                "\n - <color=#00FFFF>clear</color>: Clear the terminal display." +
+                "\n - <color=#00FFFF>history</color>: Show command history." +
+                "\n - <color=#00FFFF>infiniteration</color>: Execute engine algorithm." +
+                "\n\n<color=#888888>Shortcuts: [Tab] Completion, [Up/Down] History, [Esc] Clear Line, [Ctrl+L] Clear Screen</color>");
                 "\n - <color=#00FFFF><b>help</b></color>: Show this message." +
                 "\n - <color=#00FFFF><b>clear</b></color>: Clear terminal display." +
                 "\n - <color=#00FFFF><b>history</b></color>: Show command history." +
@@ -482,6 +487,8 @@ namespace Milehigh.World.Terminal
 
         private int GetLevenshteinDistance(string s, string t)
         {
+            // ⚡ Bolt: Optimized Levenshtein Distance using O(M) space and stackalloc to eliminate heap allocations.
+            // This significantly reduces GC pressure during fuzzy command matching.
             int n = s.Length, m = t.Length;
             if (n == 0) return m; if (m == 0) return n;
             int[,] d = new int[n + 1, m + 1];
@@ -493,6 +500,10 @@ namespace Milehigh.World.Terminal
             int n = s.Length, m = t.Length;
             int n = s.Length;
             int m = t.Length;
+            if (n < m) { string temp = s; s = t; t = temp; int tmp = n; n = m; m = tmp; }
+
+            // Use stackalloc for small strings to avoid heap allocation.
+            // Max command length is 256, but typical commands are much shorter.
             if (n == 0) return m;
             // ⚡ Bolt: Optimized Levenshtein Distance using Span<int> and stackalloc to eliminate heap allocations.
             // Uses O(M) space and swaps span references to avoid redundant copies.
