@@ -95,6 +95,20 @@ namespace Milehigh.World.Terminal
             outputDisplay.text = "";
             outputDisplay.maxVisibleCharacters = 0;
 
+            // 🎨 Palette: Time-aware personalized greeting for a touch of delight.
+            string greeting = DateTime.Now.Hour switch
+            {
+                >= 5 and < 12 => "Good morning",
+                >= 12 and < 17 => "Good afternoon",
+                >= 17 and < 21 => "Good evening",
+                _ => "Welcome back"
+            };
+
+            // 🎨 Palette: Enhanced retro terminal startup sequence with simulated session info.
+            string timestamp = DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy");
+            WriteToTerminal($"<color=#AAAAAA>Last login: {timestamp} on ttys000</color>");
+            WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: OTIS v2.4.0-VOID_LATTICE" +
+                            $"\n{greeting}, Operator. Type <color=#00FFFF>'help'</color> for available commands.");
             // 🎨 Palette: Enhanced retro terminal startup sequence with simulated session info.
             string timestamp = DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy");
             WriteToTerminal($"<color=#00FF00>[SYSTEM]</color>: OTIS v2.4.0-VOID_LATTICE" +
@@ -248,6 +262,8 @@ namespace Milehigh.World.Terminal
                 return;
             }
 
+            // 🎨 Palette: Echo sanitized input using #AAAAAA for accessible contrast.
+            WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
             // 🎨 Palette: Echo sanitized input after validation passes
             // 🎨 Palette: Echo sanitized input
             WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
@@ -443,6 +459,7 @@ namespace Milehigh.World.Terminal
             if (_typewriterCoroutine != null)
             {
                 StopCoroutine(_typewriterCoroutine);
+                // Ensure all characters (excluding the cursor) are visible
                 outputDisplay.maxVisibleCharacters = outputDisplay.textInfo.characterCount;
             }
 
@@ -472,6 +489,13 @@ namespace Milehigh.World.Terminal
             int startVisibleCount = outputDisplay.textInfo.characterCount;
 
             outputDisplay.ForceMeshUpdate();
+
+            int totalChars = outputDisplay.textInfo.characterCount;
+            int endVisibleCount = totalChars - 1; // Exclude cursor from typewriter reveal
+
+            for (int i = startVisibleCount; i < endVisibleCount; i++)
+            {
+                int currentIndex = i + 1;
             int startVisibleCount = outputDisplay.textInfo.characterCount;
 
             for (int i = 1; i <= (totalChars - startVisibleCount - 1); i++)

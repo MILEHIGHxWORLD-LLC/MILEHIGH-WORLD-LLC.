@@ -184,6 +184,7 @@ namespace Milehigh.Core
 
         private void ApplyInteraction(ObjectInteraction interaction)
         {
+            // 🛡️ Sentinel: Prevent Insecure Direct Object Reference (IDOR) by blocking critical system managers.
             // 🛡️ Sentinel: Consolidate security validation into a single, linear pipeline.
             if (interaction == null || string.IsNullOrWhiteSpace(interaction.objectId)) return;
 
@@ -206,6 +207,11 @@ namespace Milehigh.Core
             GameObject? target = GetCachedObject(objectId);
             if (target != null)
             {
+                // 🛡️ Sentinel: Secondary security check. Verify the resolved object name against the blocklist
+                // as defense-in-depth against path-based or hierarchy-based bypasses.
+                string targetName = target.name.Trim();
+                if (ProtectedSystemObjects.Contains(targetName))
+                {
                 // IDOR check 2: Resolved object name (Defense-in-depth)
                 string targetName = target.name.Trim();
                 if (ProtectedSystemObjects.Contains(targetName))
