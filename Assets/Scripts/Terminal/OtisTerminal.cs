@@ -92,6 +92,13 @@ namespace Milehigh.World.Terminal
             outputDisplay.maxVisibleCharacters = 0;
 
             // 🎨 Palette: Enhanced retro terminal startup sequence with simulated session info.
+            string lastLogin = DateTime.Now.ToString("ddd MMM dd HH:mm:ss");
+            string timestamp = DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy");
+
+            WriteToTerminal($"<color=#888888>Last login: {lastLogin} on ttys000</color>");
+            WriteToTerminal($"\n<color=#00FF00>[SYSTEM]</color>: OTIS v2.4.0-VOID_LATTICE" +
+                            $"\nLast login: {timestamp} on ttys001" +
+                            $"\nWelcome to the Terminal. Type <color=#00FFFF>'help'</color> for available commands.");
             string timestamp = DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy");
             WriteToTerminal($"<color=#00FF00>[SYSTEM]</color>: OTIS v2.4.0-VOID_LATTICE" +
                             $"\n<color=#AAAAAA>Last login: {timestamp} on ttys001</color>" +
@@ -122,10 +129,12 @@ namespace Milehigh.World.Terminal
 
         private void UpdateCursorVisibility()
         {
-            if (outputDisplay == null || _typewriterCoroutine != null) return;
+            if (outputDisplay == null) return;
 
             int totalChars = outputDisplay.textInfo.characterCount;
             if (totalChars == 0 || !outputDisplay.text.EndsWith("█")) return;
+
+            if (_typewriterCoroutine != null) return; // Managed by typewriter during reveal
 
             outputDisplay.maxVisibleCharacters = _cursorVisible ? totalChars : Mathf.Max(0, totalChars - 1);
         }
@@ -189,6 +198,9 @@ namespace Milehigh.World.Terminal
                 return;
             }
 
+            // 🛡️ Sentinel: Sanitize input by escaping Rich Text tags to prevent UI injection/DoS.
+            string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
+
             // 🛡️ Sentinel: Input validation pipeline: Validate -> Sanitize -> Echo -> Execute.
             if (input.Length > MaxInputLength)
             {
@@ -208,6 +220,7 @@ namespace Milehigh.World.Terminal
                 return;
             }
 
+            // 🎨 Palette: Echo sanitized input after validation passes
             WriteToTerminal($"\n<color=#888888>> {sanitizedInput}</color>");
             // 🎨 Palette: Echo sanitized input exactly once after validation.
             WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
@@ -302,6 +315,8 @@ namespace Milehigh.World.Terminal
 
         private int GetLevenshteinDistance(string s, string t)
         {
+            // ⚡ Bolt: Optimized Levenshtein Distance using O(M) space and stackalloc Span<int> for inputs up to 128 characters.
+            // This eliminates heap allocations during high-frequency fuzzy command matching.
             if (string.IsNullOrEmpty(s)) return t?.Length ?? 0;
             if (string.IsNullOrEmpty(t)) return s.Length;
 
@@ -344,6 +359,17 @@ namespace Milehigh.World.Terminal
         private void WriteToTerminal(string message)
         {
             if (outputDisplay == null) return;
+            if (_typewriterCoroutine != null)
+            {
+                StopCoroutine(_typewriterCoroutine);
+                // Ensure previous message and its cursor logic are handled
+                outputDisplay.maxVisibleCharacters = outputDisplay.textInfo.characterCount;
+            }
+
+            // Remove previous cursor before appending new message
+            if (outputDisplay.text.EndsWith("█"))
+                outputDisplay.text = outputDisplay.text.Substring(0, outputDisplay.text.Length - 1);
+
             if (_typewriterCoroutine != null) StopCoroutine(_typewriterCoroutine);
 
             if (outputDisplay.text.EndsWith("█"))
@@ -371,6 +397,9 @@ namespace Milehigh.World.Terminal
             outputDisplay.ForceMeshUpdate();
             int startVisibleCount = outputDisplay.textInfo.characterCount;
 
+            outputDisplay.text += message + "█"; // Append message and the cursor
+            int startVisibleCount = outputDisplay.textInfo.characterCount;
+
             outputDisplay.ForceMeshUpdate();
             int startVisibleCount = outputDisplay.textInfo.characterCount;
 
@@ -386,6 +415,11 @@ namespace Milehigh.World.Terminal
             int totalChars = outputDisplay.textInfo.characterCount;
             int endVisibleCount = totalChars - 1;
 
+            for (int i = 1; i <= (totalChars - startVisibleCount); i++)
+            {
+                int currentIndex = startVisibleCount + i;
+                // Reveal character and ensure cursor remains visible at the end
+                outputDisplay.maxVisibleCharacters = _cursorVisible ? currentIndex : currentIndex - 1;
             for (int i = 1; i <= (totalChars - startVisibleCount - 1); i++)
             {
                 int currentIndex = startVisibleCount + i;
@@ -401,17 +435,37 @@ namespace Milehigh.World.Terminal
                 char c = outputDisplay.textInfo.characterInfo[i].character;
                 float totalDelay = typingSpeed;
 
-                if (c == '.' || c == '!' || c == '?')
+                if (currentIndex <= endVisibleCount)
                 {
+                    char c = outputDisplay.textInfo.characterInfo[currentIndex - 1].character;
+                    float totalDelay = typingSpeed;
+
+                    if (c == '.' || c == '!' || c == '?')
+                    {
+                        bool isEndOfSentence = true;
+                        if (currentIndex < endVisibleCount)
+                        {
+                            char nextChar = outputDisplay.textInfo.characterInfo[currentIndex].character;
+                            if (!char.IsWhiteSpace(nextChar)) isEndOfSentence = false;
+                        }
+
+                        if (isEndOfSentence)
+                        {
+                            bool isEllipsis = (c == '.' && currentIndex - 2 >= 0 && outputDisplay.textInfo.characterInfo[currentIndex - 2].character == '.');
+                            totalDelay += isEllipsis ? typingSpeed * 3f : punctuationDelay;
+                        }
                     bool isEndOfSentence = true;
                     if (i + 1 < endVisibleCount)
                     {
                         char nextChar = outputDisplay.textInfo.characterInfo[i + 1].character;
                         if (!char.IsWhiteSpace(nextChar)) isEndOfSentence = false;
                     }
-
-                    if (isEndOfSentence)
+                    else if (c == ',' || c == ':' || c == ';')
                     {
+                        totalDelay += commaDelay;
+                    }
+
+                    yield return GetWait(totalDelay);
                         bool isEllipsis = (c == '.' && i - 1 >= 0 && outputDisplay.textInfo.characterInfo[i - 1].character == '.');
                         totalDelay += isEllipsis ? typingSpeed * 3f : punctuationDelay;
                     }
