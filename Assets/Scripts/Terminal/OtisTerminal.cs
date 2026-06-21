@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using UnityEngine;
+using TMPro;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -21,6 +23,8 @@ namespace Milehigh.World.Terminal
         [SerializeField] private float punctuationDelay = 0.15f;
 
         [Header("Cursor Settings")]
+        [SerializeField] private float blinkRate = 0.53f;
+        private const char TerminalCursor = '█';
         [SerializeField] private float blinkRate = 0.5f;
         private const char CursorChar = '█';
 
@@ -35,6 +39,8 @@ namespace Milehigh.World.Terminal
         private Coroutine? _typewriterCoroutine;
         private Coroutine? _cursorCoroutine;
         private bool _cursorVisible = true;
+        private float _nextBlinkTime;
+
         private readonly List<string> _commandHistory = new List<string>();
         private int _historyIndex = -1;
         private string _persistentInput = "";
@@ -155,12 +161,14 @@ namespace Milehigh.World.Terminal
         {
             if (_commandHistory.Count == 0) return;
 
+            if (_historyIndex == -1 && direction == 1)
             if (_historyIndex == -1)
             {
                 _persistentInput = commandInput.text;
             }
 
             int newIndex = Mathf.Clamp(_historyIndex + direction, -1, _commandHistory.Count - 1);
+
             if (newIndex != _historyIndex)
             {
                 _historyIndex = newIndex;
@@ -232,6 +240,9 @@ namespace Milehigh.World.Terminal
                 return;
             }
 
+            if (!SafeCommandRegex.IsMatch(input))
+            {
+                WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
             // 🛡️ Sentinel: Use explicit whitespace classes [ \t] instead of \s to prevent newline injection/terminal spoofing.
             if (!SafeCommandRegex.IsMatch(input))
             {
@@ -240,6 +251,8 @@ namespace Milehigh.World.Terminal
                 return;
             }
 
+            // 🎨 Palette: Echo sanitized input using #AAAAAA for accessible contrast.
+            WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
             // 🛡️ Sentinel: Sanitize input by escaping Rich Text tags to prevent UI injection/DoS.
             string sanitizedInput = input.Replace("<", "&lt;").Replace(">", "&gt;");
 
@@ -294,6 +307,7 @@ namespace Milehigh.World.Terminal
         {
             WriteToTerminal("\n<color=#00FF00>[SYSTEM]</color>: <color=#FFFF00>Available Commands:</color>" +
                             "\n - <color=#00FFFF><b>help</b></color>: Show this message." +
+                            "\n - <color=#00FFFF><b>clear</b></color>: Clear terminal." +
                             "\n - <color=#00FFFF><b>clear</b></color>: Clear the terminal display." +
                             "\n - <color=#00FFFF><b>history</b></color>: Show command history." +
                             "\n - <color=#00FFFF><b>infiniteration</b></color>: Execute engine algorithm." +
@@ -351,6 +365,7 @@ namespace Milehigh.World.Terminal
 
             if (m == 0) return n;
 
+            // ⚡ Bolt: Optimized Levenshtein Distance using Span<int> and stackalloc to eliminate heap allocations.
             Span<int> v0 = m < 128 ? stackalloc int[m + 1] : new int[m + 1];
             Span<int> v1 = m < 128 ? stackalloc int[m + 1] : new int[m + 1];
 
@@ -374,6 +389,10 @@ namespace Milehigh.World.Terminal
             return v0[m];
         }
 
+        private void WriteToTerminal(string message)
+        {
+            if (outputDisplay == null) return;
+
         private void CleanupInput()
         {
             if (commandInput != null)
@@ -396,6 +415,13 @@ namespace Milehigh.World.Terminal
             if (_typewriterCoroutine != null)
             {
                 StopCoroutine(_typewriterCoroutine);
+                _typewriterCoroutine = null;
+            }
+
+            // Remove previous cursor before appending new message
+            if (outputDisplay.text.EndsWith(TerminalCursor))
+                outputDisplay.text = outputDisplay.text.Substring(0, outputDisplay.text.Length - 1);
+
                 // Ensure previous message and its cursor logic are handled
                 if (outputDisplay.text.EndsWith(TerminalCursor))
                     outputDisplay.text = outputDisplay.text.Substring(0, outputDisplay.text.Length - 1);
@@ -446,6 +472,7 @@ namespace Milehigh.World.Terminal
                 char c = outputDisplay.textInfo.characterInfo[i].character;
                 float totalDelay = typingSpeed;
 
+                // Rhythmic punctuation pauses
                 // Rhythmic punctuation pauses to mimic natural speech cadence
                 if (c == '.' || c == '!' || c == '?')
                 {
@@ -458,6 +485,7 @@ namespace Milehigh.World.Terminal
 
                     if (isEndOfSentence)
                     {
+                        bool isEllipsis = (c == '.' && i - 1 >= 0 && outputDisplay.textInfo.characterInfo[i - 1].character == '.');
                         bool isEllipsis = (c == '.' && i - 2 >= 0 && outputDisplay.textInfo.characterInfo[i - 2].character == '.');
                         bool isEllipsis = (i > 0 && outputDisplay.textInfo.characterInfo[i - 1].character == '.');
                         totalDelay += isEllipsis ? typingSpeed * 3f : punctuationDelay;
@@ -471,6 +499,10 @@ namespace Milehigh.World.Terminal
                 yield return GetWait(totalDelay);
             }
 
+            // Finalize with cursor visible
+            outputDisplay.maxVisibleCharacters = totalChars;
+            _cursorVisible = true;
+            _nextBlinkTime = Time.unscaledTime + blinkRate;
             outputDisplay.maxVisibleCharacters = endVisibleCount;
             _cursorVisible = true;
             _typewriterCoroutine = null;
@@ -482,6 +514,9 @@ namespace Milehigh.World.Terminal
 
         private IEnumerator HandleBlinkingCursor()
         {
+            while (true)
+            {
+                if (_typewriterCoroutine == null && outputDisplay != null)
             if (outputDisplay == null) yield break;
 
             while (true)
@@ -528,18 +563,19 @@ namespace Milehigh.World.Terminal
             {
                 if (!string.IsNullOrEmpty(_lastSuggestion))
                 {
-                    commandInput.text = _lastSuggestion;
-                    commandInput.MoveTextEnd(false);
-                    _lastSuggestion = "";
-                }
-                return;
-            }
+                    if (Time.unscaledTime >= _nextBlinkTime)
+                    {
+                        _cursorVisible = !_cursorVisible;
+                        _nextBlinkTime = Time.unscaledTime + blinkRate;
 
-            string? match = _availableCommands.FirstOrDefault(c => c.StartsWith(currentInput));
-            if (!string.IsNullOrEmpty(match))
-            {
-                commandInput.text = match;
-                commandInput.MoveTextEnd(false);
+                        int totalChars = outputDisplay.textInfo.characterCount;
+                        if (totalChars > 0 && outputDisplay.text.EndsWith(TerminalCursor))
+                        {
+                            outputDisplay.maxVisibleCharacters = _cursorVisible ? totalChars : totalChars - 1;
+                        }
+                    }
+                }
+                yield return null;
             }
         }
 
