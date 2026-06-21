@@ -71,10 +71,7 @@ namespace Milehigh.Core
             if (scenario == null) return;
 
             _objectCache.Clear();
-            // ⚡ Bolt: Replace FindObjectsOfType with FindObjectsByType(FindObjectsSortMode.None) for improved performance.
-            // This avoids redundant sorting and uses a more optimized engine path in modern Unity versions.
             // ⚡ Bolt: Use FindObjectsByType with FindObjectsSortMode.None (Unity 2021.3+).
-            // This bypasses the internal sorting by Instance ID, providing an 80-90% speedup for large scenes.
             foreach (var go in UnityEngine.Object.FindObjectsByType<GameObject>(FindObjectsSortMode.None))
             {
                 if (go != null && !string.IsNullOrEmpty(go.name))
@@ -185,6 +182,22 @@ namespace Milehigh.Core
         private void ApplyInteraction(ObjectInteraction interaction)
         {
             // 🛡️ Sentinel: Prevent Insecure Direct Object Reference (IDOR) by blocking critical system managers.
+            if (interaction == null || string.IsNullOrWhiteSpace(interaction.objectId)) return;
+
+            string objectId = interaction.objectId.Trim();
+            if (ProtectedSystemObjects.Contains(objectId))
+            {
+                Debug.LogError($"[Security] Blocked unauthorized interaction attempt to system object: {objectId}");
+                return;
+            }
+
+            GameObject? target = GetCachedObject(objectId);
+            if (target != null)
+            {
+                // 🛡️ Sentinel: Double validation - check the resolved object name against the blocklist
+                if (ProtectedSystemObjects.Contains(target.name.Trim()))
+                {
+                    Debug.LogError($"[Security] Blocked unauthorized interaction attempt to resolved system object: {target.name}");
             // 🛡️ Sentinel: Consolidate security validation into a single, linear pipeline.
             // Prevents NullReferenceException (information disclosure) and IDOR attacks.
             if (interaction == null || string.IsNullOrWhiteSpace(interaction.objectId)) return;
@@ -207,6 +220,11 @@ namespace Milehigh.Core
                 if (ProtectedSystemObjects.Contains(target.name.Trim()))
                 {
                     Debug.LogError($"[Security] Blocked unauthorized interaction attempt to resolved system object: {target.name}");
+                // as defense-in-depth against path-based or hierarchy-based bypasses (e.g. "/CampaignManager").
+                string targetName = target.name.Trim();
+                if (ProtectedSystemObjects.Contains(targetName))
+                {
+                    Debug.LogError($"[Security] Blocked resolved interaction to protected system object: {targetName}");
                     return;
                 }
 
