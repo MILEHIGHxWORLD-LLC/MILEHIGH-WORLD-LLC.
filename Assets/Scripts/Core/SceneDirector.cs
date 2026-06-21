@@ -15,6 +15,7 @@ namespace Milehigh.Core
 
         // 🛡️ Sentinel: Hardened blocklist to prevent Insecure Direct Object Reference (IDOR) attacks on critical system managers.
         // Uses OrdinalIgnoreCase for defense-in-depth against case-insensitive bypass attempts.
+        // Initialized with OrdinalIgnoreCase to provide defense-in-depth against case-insensitive IDOR bypass attempts.
         private static readonly HashSet<string> ProtectedSystemObjects = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
         {
             "CampaignManager", "SceneDirector", "CameraManager", "AlliancePowerManager",
@@ -191,6 +192,29 @@ namespace Milehigh.Core
                 if (ProtectedSystemObjects.Contains(target.name.Trim()))
                 {
                     Debug.LogError($"[Security] Blocked unauthorized interaction attempt to resolved system object: {target.name}");
+            // 🛡️ Sentinel: Consolidate security validation into a single, linear pipeline.
+            // Prevents NullReferenceException (information disclosure) and IDOR attacks.
+            if (interaction == null || string.IsNullOrWhiteSpace(interaction.objectId)) return;
+
+            // 🛡️ Sentinel: Prevent Insecure Direct Object Reference (IDOR) by sanitizing untrusted external object IDs.
+            // Block critical system managers and architectural singletons from being manipulated via external data.
+            // Trim input to thwart bypasses using leading/trailing whitespace.
+            string cleanId = interaction.objectId.Trim();
+            if (ProtectedSystemObjects.Contains(cleanId))
+            {
+                Debug.LogError($"[Security] Blocked unauthorized interaction attempt to system object: {cleanId}");
+                return;
+            }
+
+            GameObject? target = GetCachedObject(cleanId);
+            if (target != null)
+            {
+                // 🛡️ Sentinel: Double validation - check the resolved object name against the blocklist
+                // as defense-in-depth against path-based or hierarchy-based bypasses (e.g. "/CampaignManager").
+                string targetName = target.name.Trim();
+                if (ProtectedSystemObjects.Contains(targetName))
+                {
+                    Debug.LogError($"[Security] Blocked resolved interaction to protected system object: {targetName}");
                     return;
                 }
 
