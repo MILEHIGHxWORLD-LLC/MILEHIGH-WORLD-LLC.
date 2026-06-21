@@ -14,6 +14,7 @@ namespace Milehigh.Core
         public Transform characterSpawnRoot = null!;
 
         // 🛡️ Sentinel: Hardened blocklist to prevent Insecure Direct Object Reference (IDOR) attacks on critical system managers.
+        // 🛡️ Sentinel: Use OrdinalIgnoreCase to prevent case-insensitive bypasses.
         // Initialized with OrdinalIgnoreCase to provide defense-in-depth against case-insensitive IDOR bypass attempts.
         // Uses OrdinalIgnoreCase for defense-in-depth against case-insensitive bypass attempts.
         private static readonly HashSet<string> ProtectedSystemObjects = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
@@ -21,6 +22,8 @@ namespace Milehigh.Core
             "CampaignManager", "SceneDirector", "CameraManager", "AlliancePowerManager",
             "CombatManager", "GlobalResonanceManager", "BicameralBattleEngine",
             "SkyIxController", "CinematicController", "TimelineSimulationEngine",
+            "AsyncSceneLoader", "OtisTerminal", "EndGameMultiFrontOrchestrator",
+            "EndGameOrchestrationBridge", "LatticeSynchronizer", "RealityAnchor"
             "AsyncSceneLoader", "OtisTerminal", "EndGameMultiFrontOrchestrator"
             "AsyncSceneLoader", "OtisTerminal"
             "AsyncSceneLoader", "OtisTerminal", "EndGameMultiFrontOrchestrator",

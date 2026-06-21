@@ -141,6 +141,15 @@
 **Learning:** Code rot, especially when it results in multiple overlapping validation blocks, often leads to syntax errors that are overlooked during quick audits. These errors can silently disable security controls.
 **Prevention:** Consolidate security-critical logic into a single, clean, and properly sequenced pipeline: Validate Input -> Check Authorization (Blocklist) -> Execute. Avoid redundant, rotted code blocks that obscure the primary security path.
 
+## 2024-05-29 - [Terminal Spoofing via Newline Injection]
+**Vulnerability:** The `SafeCommandRegex` in `OtisTerminal.cs` used `\s` which allowed newline characters. An attacker could inject newlines followed by fake system messages (e.g., `help\n[SYSTEM]: Admin access granted`) to spoof the terminal UI and deceive users.
+**Learning:** Generic whitespace matchers (`\s`) are dangerous in terminal/chat interfaces where newlines can be used to break out of the intended message format.
+**Prevention:** Use explicit whitespace character classes like `[ \t]` when newlines should be disallowed in a single-line input field.
+
+## 2024-05-29 - [IDOR Protection Bypass via Case Sensitivity]
+**Vulnerability:** The `ProtectedSystemObjects` blocklist in `SceneDirector.cs` used default string comparison. Malicious external data could use alternate casing (e.g., `campaignmanager`) to potentially bypass the blocklist while still matching the target object in case-insensitive environments or if the lookup logic was inconsistent.
+**Learning:** Security blocklists for strings should always use case-insensitive comparison (e.g., `StringComparer.OrdinalIgnoreCase`) to ensure defense-in-depth against variations in input casing.
+**Prevention:** Always initialize security-critical HashSets or Dictionaries with `OrdinalIgnoreCase` when dealing with untrusted string identifiers.
 ## 2024-05-28 - [IDOR Protection and Build Hygiene]
 **Vulnerability:** Incomplete IDOR blocklist in SceneDirector.cs and repository pollution via build artifacts (bin/, obj/, .dll, .pdb).
 **Learning:** Security auditing must extend beyond code to include repository hygiene. Committing build artifacts can obscure source changes and introduce supply chain risks.

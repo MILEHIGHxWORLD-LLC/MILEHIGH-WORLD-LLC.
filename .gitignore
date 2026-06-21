@@ -4,6 +4,9 @@
 *.dll
 *.pdb
 *.user
+.vscode/
+.Jules/
+.conda/
 *.csproj
 *.sln
 *.suo
