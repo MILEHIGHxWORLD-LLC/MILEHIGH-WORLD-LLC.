@@ -104,3 +104,62 @@
 **Vulnerability:** Insecure Direct Object Reference (IDOR) via an incomplete security blocklist in `SceneDirector.cs`. Malicious external data could target critical system managers like `CombatManager` or `GlobalResonanceManager` because they were omitted from the initial security check. Additionally, severe code rot (duplicate variable declarations and redundant logic) obscured these gaps.
 **Learning:** Security blocklists must be comprehensive and regularly updated to include new architectural components. Code rot and redundant logic paths increase the risk of security validation being bypassed or misconfigured.
 **Prevention:** Maintain a centralized, hardened list of protected system objects. Consolidate interaction logic into a clean "Validate-then-Execute" pipeline to ensure consistent security enforcement.
+
+## 2026-06-21 - [Consolidation of Security Controls and Code Rot Mitigation]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) via an incomplete blocklist in `SceneDirector.cs` and UI Injection/DoS via code rot in `OtisTerminal.cs`.
+**Learning:** Code rot (specifically redundant field declarations and conflicting logic blocks) masks missing security controls and introduces bugs like double instantiation. In `OtisTerminal.cs`, redundant echo paths bypassed input validation, potentially allowing Rich Text UI injection.
+**Prevention:** Consolidate interactive input and external data processing into a single, linear "Validate -> Sanitize -> Execute" pipeline. Ensure security validation (length, regex, range) is the first line of defense before any echoing or state changes occur.
+## 2024-05-27 - [IDOR Bypass and DoS via Code Rot and Missing Validation]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) bypass in `SceneDirector.cs` due to a syntax error (dangling `||`) that truncated the blocklist check, and a physics-based Denial of Service (DoS) vulnerability in `HorizonGameData.cs` where `NaN` or `Infinity` values were not validated.
+**Learning:** Code rot, specifically malformed conditional logic, can silently disable security controls. Furthermore, numeric validation is critical in engine-integrated systems to prevent terminal instability from malicious data.
+**Prevention:** Always verify that security blocklists are syntactically complete and maintain a "fail-fast" validation layer for all numeric inputs sourced from external data.
+## 2024-05-27 - [UI Injection via Code Rot in OtisTerminal]
+**Vulnerability:** Redundant member declarations and overlapping command processing logic in `OtisTerminal.cs` echoed user input to the terminal without escaping Rich Text tags (`<`, `>`). This allowed users to inject malicious tags (e.g., `<size=1000>`) to disrupt the UI.
+**Learning:** Code rot, specifically duplicate class members and fragmented logic paths, can hide missing security controls and make it difficult to ensure consistent input sanitization.
+**Prevention:** Consolidate interactive input processing into a single, clean pipeline and ensure that all untrusted input is sanitized (e.g., escaping rich text tags) before being echoed to the UI.
+
+## 2024-05-28 - [IDOR Protection Hardening and Code Rot Consolidation]
+**Vulnerability:** Incomplete IDOR blocklist in  and a syntax error (dangling `||` operator) caused by redundant, rotted code blocks that potentially bypassed security checks. Critical system managers like `TimelineSimulationEngine` were omitted from the protection list.
+**Learning:** Code rot, especially when it results in multiple overlapping validation blocks, often leads to syntax errors that are overlooked during quick audits. These errors can silently disable security controls.
+**Prevention:** Consolidate validation logic into a single, well-defined pipeline. Regularly audit blocklists against the actual list of architectural singletons in the project.
+
+## 2024-05-28 - [IDOR Protection Hardening and Code Rot Consolidation]
+**Vulnerability:** Incomplete IDOR blocklist in SceneDirector.cs and a syntax error (dangling '||' operator) caused by redundant, rotted code blocks that potentially bypassed security checks. Critical system managers like TimelineSimulationEngine were omitted from the protection list.
+**Learning:** Code rot, especially when it results in multiple overlapping validation blocks, often leads to syntax errors that are overlooked during quick audits. These errors can silently disable security controls.
+**Prevention:** Consolidate validation logic into a single, well-defined pipeline. Regularly audit blocklists against the actual list of architectural singletons in the project.
+## 2025-05-20 - [IDOR Protection Hardening and Code Rot Consolidation]
+**Vulnerability:** `SceneDirector.cs` had a fragmented IDOR blocklist and redundant null checks (code rot), which masked a missing protection for `TimelineSimulationEngine`.
+**Learning:** Overlapping and redundant security checks often lead to logic errors and maintenance gaps. Consolidating security validation into a single, linear pipeline ensures all checks are executed and simplifies auditing.
+**Prevention:** Always prioritize a "Validate-then-Execute" pipeline and maintain a comprehensive, single-source-of-truth blocklist for sensitive architectural components.
+
+## 2024-05-28 - [IDOR Protection Bypass via Code Rot and Syntax Errors]
+**Vulnerability:** A critical security bypass was found in `SceneDirector.cs` where multiple overlapping `if` blocks and a dangling `||` operator in the `ApplyInteraction` method effectively neutralized the IDOR protection. This allowed potentially malicious external data to interact with any scene object, including core managers.
+**Learning:** Code rot and redundant logic paths are major security risks. In this case, previous attempts to "harden" the code actually broke it by introducing syntax errors and logic contradictions.
+**Prevention:** Consolidate security-critical logic into a single, linear "Validate-then-Execute" pipeline. Avoid redundant validation blocks that can lead to maintenance gaps and silent failures.
+## 2025-05-21 - [IDOR Bypass via Syntax Error in SceneDirector]
+**Vulnerability:** A syntax error in `SceneDirector.cs` (a dangling `||` operator in an `if` condition) truncated the IDOR blocklist check, allowing unauthorized manipulation of critical system managers.
+**Learning:** Code rot, especially when it results in multiple overlapping validation blocks, often leads to syntax errors that are overlooked during quick audits. These errors can silently disable security controls.
+**Prevention:** Consolidate security-critical logic into a single, clean, and properly sequenced pipeline: Validate Input -> Check Authorization (Blocklist) -> Execute. Avoid redundant, rotted code blocks that obscure the primary security path.
+
+## 2025-05-28 - [IDOR Case-Bypass and Code Rot in Terminal Logic]
+**Vulnerability:** Insecure Direct Object Reference (IDOR) bypass in `SceneDirector.cs` via case-insensitive object name matching, and potential security validation bypass in `OtisTerminal.cs` due to extreme code rot (redundant loops and orphaned string blocks).
+**Learning:** Security blocklists using default string comparisons are vulnerable to case-variation bypasses (e.g., 'scenedirector' vs 'SceneDirector'). Furthermore, rotted code with duplicate logic paths makes it difficult to ensure that all execution branches are properly validated and sanitized.
+**Prevention:** Use `StringComparer.OrdinalIgnoreCase` for all security-critical string lookups and blocklists. Consolidate interactive input processing into a single, linear pipeline to eliminate redundant and unvalidated execution paths.
+## 2025-05-24 - [Case-Insensitive IDOR Bypass in SceneDirector]
+**Vulnerability:** The `ProtectedSystemObjects` blocklist in `SceneDirector.cs` was initialized as a case-sensitive `HashSet<string>`. This allowed potential IDOR bypasses where an attacker could provide an ID like `scenedirector` or `CAMPAIGNMANAGER` to circumvent the security check while still successfully resolving the object via Unity's (often case-tolerant) lookup methods or the application's internal caches.
+**Learning:** Security blocklists must account for the normalization behavior of the underlying systems they protect. If the target system is case-insensitive, the security check must also be case-insensitive.
+**Prevention:** Always use `StringComparer.OrdinalIgnoreCase` when creating HashSets or Dictionaries intended for security validation of string-based IDs.
+
+## 2025-05-24 - [Terminal Spoofing and Injection via Newline Characters]
+**Vulnerability:** The `SafeCommandRegex` in `OtisTerminal.cs` used the generic `\s` whitespace shorthand, which includes newline (`\n`) and carriage return (`\r`) characters. This could allow an attacker to inject multi-line inputs that might spoof terminal output or bypass certain single-line processing assumptions.
+**Learning:** Overly permissive whitespace validation in interactive consoles can lead to UI spoofing or command injection vulnerabilities.
+**Prevention:** Use explicit whitespace character classes (e.g., `[ \t]`) instead of `\s` when validating single-line command inputs to ensure control characters like newlines are strictly forbidden.
+## 2025-05-22 - Case-Insensitive IDOR Protection in Scene Interaction
+**Vulnerability:** Insecure Direct Object Reference (IDOR) via case-sensitive blocklist checks in SceneDirector.cs.
+**Learning:** Blocklists for untrusted input identifiers are fragile if they don't account for casing variations, especially if the underlying lookup (like GameObject.Find) or the input source might normalize or ignore casing.
+**Prevention:** Always use 'StringComparer.OrdinalIgnoreCase' when initializing blocklists or performing security-critical string comparisons for external identifiers.
+
+## 2025-06-17 - Double-Validation for IDOR Protection
+**Vulnerability:** Insecure Direct Object Reference (IDOR) via `GameObject.Find` in `SceneDirector.cs`. Previous protections only checked the input string against a blocklist. An attacker could potentially use whitespace or other string variations to bypass the initial string check while still resolving to a protected object.
+**Learning:** Checking only the input string is insufficient if the underlying lookup system (`GameObject.Find`) might resolve different or rotted string variations to the same sensitive object.
+**Prevention:** Implement "Double Validation": Validate the untrusted input string against the blocklist, resolve the object, and then *re-validate* the resolved object's actual name against the blocklist before performing any operations.

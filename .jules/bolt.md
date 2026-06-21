@@ -1,3 +1,6 @@
+## 2025-05-14 - GC optimization in Unity C#
+**Learning:** In Unity, `new WaitForSeconds(n)` in a coroutine loop and string concatenation in a UI loop are common sources of frame-time spikes due to GC pressure. Additionally, heap-allocating arrays for algorithms like Levenshtein distance during user input can be eliminated using `stackalloc` and `Span<T>`.
+**Action:** Always check for `new WaitForSeconds` in coroutines and string concatenation in high-frequency UI updates. Use `StringBuilder` for string building and `stackalloc Span<T>` for temporary buffer needs in performance-critical paths.
 ## 2024-05-24 - Unity GameObject.Find Performance Bottleneck
 **Learning:** In Unity 3D scripts like `SceneDirector.cs` within this project, methods frequently call `GameObject.Find()` to search for characters or interactive objects by name during scene setups. This forces Unity to traverse the entire scene hierarchy repeatedly (O(N) operation), which can cause noticeable load times or frame drops if called continuously or on large scenes.
 **Action:** Replace direct `GameObject.Find()` calls with a `Dictionary<string, GameObject>` cache when objects are fetched by name multiple times or instantiated dynamically. Check `cachedObj != null` to handle Unity's custom object destruction logic safely before returning a cached reference.
@@ -95,3 +98,28 @@
 ## 2024-05-18 - Optimized Combat Loop Orchestration
 **Learning:** In 'EndGameOrchestrationBridge.cs', the main combat loop was performing O(N) 'GetAlly' lookups and 'GetComponent' calls every frame. Hoisting these lookups outside the loop and using 'Shader.PropertyToID' for shader parameter updates provides a significant CPU performance win by eliminating redundant dictionary searches and string-to-int hashing in the Unity engine.
 **Action:** Always pre-cache character references and component lookups outside of high-frequency loops (Update, Coroutines, or async Tasks). Use Property IDs for any per-frame material updates.
+
+## 2024-05-30 - Combat Orchestrator Code Rot and Logic Precision
+**Learning:** Found that `EndGameOrchestrationBridge.cs` suffered from extreme code rot where multiple redundant "Bolt" optimization blocks were appended, leading to duplicate `SerializeField` and `static readonly int` declarations that break compilation. Additionally, found a subtle logic error where `deltaStep` was calculated based on a null-check of a locally instantiated class instead of its internal Unity `PrefabReference`, rendering the performance branch dead.
+**Action:** When optimizing hot loops in this codebase, first audit the file for previous conflicting optimizations and consolidate them. Ensure ternary logic for performance branches (like `deltaStep`) is grounded in the actual presence of Unity engine references, not just the C# wrapper instance.
+
+## 2024-06-05 - MaterialPropertyBlock Hoisting and Async Loop Safety
+**Learning:** Hoisting 'GetPropertyBlock' out of high-frequency async loops ('await Task.Yield()') eliminates redundant native-to-managed memory copies every frame. Additionally, wrapping async combat sequences in 'try-finally' blocks is critical to guarantee 'Time.timeScale' restoration, preventing permanent simulation slowdowns if the task is cancelled or errors occur.
+**Action:** Always hoist 'GetPropertyBlock' before entering loops and use 'try-finally' for any engine-wide state changes like 'Time.timeScale'.
+
+## 2024-06-05 - Combat Orchestrator Consolidation
+**Learning:** 'EndGameMultiFrontOrchestrator.cs' was prone to severe code rot and syntax errors (missing braces) due to multiple overlapping and triplicated optimization attempts. Consolidation into a single, clean 'Bolt' pattern is necessary to maintain both performance and compilation integrity.
+**Action:** When encountering triplicated logic or conflicting 'Bolt' comments, consolidate into a single optimized implementation and verify with a standalone 'dotnet build'.
+
+## 2026-06-12 - Zero-Allocation Fuzzy Matching and History Buffering
+**Learning:** Terminal-style components in this codebase frequently suffer from code rot and inefficient string handling. Implementing 'stackalloc Span<int>' for Levenshtein distance and 'StringBuilder' for history display eliminates major GC allocation spikes during UI interactions.
+**Action:** Always prefer 'StringBuilder' for iterative string building and 'Span<T>' with stack allocation for temporary buffers in high-frequency string algorithms.
+## 2024-05-24 - OtisTerminal Memory and GC Optimization
+**Learning:** High-frequency operations like fuzzy command matching and terminal history rendering in 'OtisTerminal.cs' were generating significant heap allocations through 'int[]' arrays and string concatenations. In modern .NET (9.0+), 'stackalloc Span<int>' can be used to eliminate heap allocations for common input sizes, and 'StringBuilder' reduces (N^2)$ allocation overhead for string building.
+**Action:** Use 'stackalloc Span<T>' for small, short-lived buffers and 'StringBuilder' for iterative string construction to reduce GC pressure and improve UI responsiveness.
+## 2025-05-20 - stackalloc Span<int> and Tuple Swap Limitations
+**Learning:** Using `stackalloc Span<int>` in Unity C# (especially with modern .NET SDKs like .NET 9/10) is a powerful way to eliminate heap allocations in algorithms like Levenshtein distance. However, `Span<T>` is a ref struct and cannot be used as a type argument in tuples, meaning `(v0, v1) = (v1, v0)` will fail with CS9244.
+**Action:** Use a temporary variable (`Span<int> temp = v0; v0 = v1; v1 = temp;`) for swapping spans to remain compatible with ref struct constraints while maintaining O(1) swap performance.
+## 2026-06-15 - [Unity Engine Object Lookup Optimization]
+**Learning:** In Unity 2021.3+, 'FindObjectsOfType' is O(n) but includes an expensive internal sort by Instance ID. Replacing it with 'FindObjectsByType<T>(FindObjectsSortMode.None)' bypasses this sort, providing a significant performance win for managers that rebuild caches from scene lookups.
+**Action:** Use 'FindObjectsByType' with 'FindObjectsSortMode.None' for bulk object discovery where order is irrelevant (e.g., dictionary population).

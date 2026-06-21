@@ -4,15 +4,18 @@ using System.Threading.Tasks;
 
 namespace UnityEngine
 {
+    public enum FindObjectsSortMode { None, InstanceID }
     public class Object
     {
+        public string name { get; set; } = "";
         public static T FindObjectOfType<T>() where T : class => null!;
         public static T[] FindObjectsOfType<T>() where T : class => new T[0];
+        public static T[] FindObjectsByType<T>(FindObjectsSortMode sortMode) where T : class => new T[0];
         public static void Destroy(Object obj) {}
         public static void DontDestroyOnLoad(Object obj) {}
-        public static T Instantiate<T>(T original, Transform parent) where T : class => null;
-        public static T Instantiate<T>(T original) where T : class => null;
-        public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation) where T : class => null;
+        public static T Instantiate<T>(T original, Transform parent) where T : class => null!;
+        public static T Instantiate<T>(T original) where T : class => null!;
+        public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation) where T : class => null!;
     }
     public class MonoBehaviour : Object
     {
@@ -22,19 +25,14 @@ namespace UnityEngine
     }
     public class GameObject : Object
     {
-        public string name { get; set; } = "";
         public Transform transform { get; } = new Transform();
         public T GetComponent<T>() where T : class => null!;
         public bool TryGetComponent<T>(out T component) where T : class { component = null!; return false; }
         public T AddComponent<T>() where T : class => null!;
         public void SetActive(bool value) {}
-        public static GameObject Find(string name) => null;
         public static GameObject Find(string name) => null!;
-        public static T Instantiate<T>(T original, Transform parent) where T : class => null!;
-        public static T Instantiate<T>(T original) where T : class => null!;
-        public static T Instantiate<T>(T original, Vector3 position, Quaternion rotation) where T : class => null!;
         public GameObject() {}
-        public GameObject(string name) {}
+        public GameObject(string name) { this.name = name; }
         public int GetInstanceID() => 0;
     }
     public class Transform : Object
@@ -44,7 +42,7 @@ namespace UnityEngine
         public Vector3 localPosition { get; set; }
         public Vector3 localScale { get; set; }
         public static Vector3 one => new Vector3(1, 1, 1);
-        public Transform parent { get; set; }
+        public Transform parent { get; set; } = null!;
         public Transform Find(string name) => null!;
     }
     public struct Vector3
@@ -59,12 +57,13 @@ namespace UnityEngine
     public struct Quaternion
     {
         public float x, y, z, w;
+        public static Quaternion identity => new Quaternion();
     }
     public class Debug
     {
         public static void Log(object message) {}
         public static void LogWarning(object message) {}
-        public static void LogError(object message) {}
+        public static void LogError(object message) { Console.WriteLine(message); }
     }
     public class JsonUtility
     {
@@ -81,8 +80,8 @@ namespace UnityEngine
     }
     public class CreateAssetMenuAttribute : Attribute
     {
-        public string fileName;
-        public string menuName;
+        public string fileName { get; set; } = "";
+        public string menuName { get; set; } = "";
     }
     public class TextAreaAttribute : Attribute
     {
@@ -105,8 +104,14 @@ namespace UnityEngine
         public static int RoundToInt(float value) => (int)value;
         public static int Clamp(int value, int min, int max) => value < min ? min : (value > max ? max : value);
         public static float Clamp(float value, float min, float max) => value < min ? min : (value > max ? max : value);
+        public static int Min(int a, int b) => a < b ? a : b;
+        public static float Min(float a, float b) => a < b ? a : b;
+        public static int Max(int a, int b) => a > b ? a : b;
+        public static float Max(float a, float b) => a > b ? a : b;
+        public static float Abs(float f) => f < 0 ? -f : f;
         public const float PI = 3.14159265f;
         public static float Sin(float f) => 0;
+        public static Vector3 insideUnitSphere => new Vector3();
     }
     public class Color
     {
@@ -169,27 +174,32 @@ namespace UnityEngine
     {
         public static bool anyKeyDown;
         public static bool GetKeyDown(KeyCode code) => false;
+        public static bool GetKey(KeyCode code) => false;
         public static bool GetMouseButtonDown(int button) => false;
     }
-    public enum KeyCode { Space, Return, UpArrow, Tab }
-    public enum KeyCode { Space, Return, UpArrow }
-    public enum KeyCode { Space, Return, UpArrow, DownArrow, Tab }
-    public enum KeyCode { Space, Return, UpArrow, Tab, DownArrow }
-    public enum KeyCode { Space, Return, UpArrow, DownArrow, Tab }
-    public enum KeyCode { Space, Return, UpArrow, DownArrow }
-    public enum KeyCode { Space, Return, UpArrow, Tab, DownArrow }
-    public enum KeyCode { Space, Return, UpArrow, DownArrow, Tab }
-    public enum KeyCode { Space, Return, UpArrow, Tab }
+    public enum KeyCode { Space, Return, UpArrow, DownArrow, Tab, Escape, LeftControl, RightControl, L }
     public static class Random
     {
         public static float Range(float min, float max) => 0;
     }
 }
 
+namespace UnityEngine.Events
+{
+    public class UnityEvent<T>
+    {
+        public void AddListener(Action<T> action) {}
+        public void RemoveListener(Action<T> action) {}
+    }
+}
+
 namespace UnityEngine.UI
 {
     public class Selectable : UnityEngine.MonoBehaviour {}
-    public class Graphic : UnityEngine.MonoBehaviour {}
+    public class Graphic : UnityEngine.MonoBehaviour
+    {
+        public UnityEngine.Color color { get; set; } = new UnityEngine.Color();
+    }
     public class Text : Graphic
     {
         public string text { get; set; } = "";
@@ -202,58 +212,32 @@ namespace TMPro
     {
         public virtual string text { get; set; } = "";
         public int maxVisibleCharacters { get; set; }
-        public int maxVisibleCharacters { get; set; }
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-        public int maxVisibleCharacters { get; set; }
         public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
         public void ForceMeshUpdate() {}
-    }
-    public class TextMeshProUGUI : TMP_Text
-    {
-        public string text { get; set; } = "";
-        public int maxVisibleCharacters { get; set; }
-    }
-
-    public class TextMeshProUGUI : TMP_Text
-    {
-        public int maxVisibleCharacters { get; set; }
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-        public virtual string text { get; set; } = "";
-        public int maxVisibleCharacters { get; set; }
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-        public string text { get; set; } = "";
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-        public int characterCount { get; set; }
-        public TMP_CharacterInfo[] characterInfo { get; set; } = new TMP_CharacterInfo[0];
-    }
-    public class TextMeshProUGUI : TMP_Text
-    {
-        public void ForceMeshUpdate() {}
-        public UnityEngine.Material fontMaterial { get; } = new UnityEngine.Material();
-        public UnityEngine.RectTransform rectTransform { get; } = new UnityEngine.RectTransform();
     }
     public class TextMeshProUGUI : TMP_Text
     {
         public override string text { get; set; } = "";
-        public UnityEngine.Color color { get; set; }
-        public TMP_TextInfo textInfo { get; } = new TMP_TextInfo();
-    }
-    public class TextMeshProUGUI : TMP_Text
-    {
+        public UnityEngine.Material fontMaterial { get; } = new UnityEngine.Material();
+        public UnityEngine.RectTransform rectTransform { get; } = new UnityEngine.RectTransform();
     }
 
     public class TMP_InputField : UnityEngine.UI.Selectable
     {
         public string text { get; set; } = "";
         public int characterLimit { get; set; }
-        public bool isFocused { get; }
+        public bool isFocused { get; } = false;
         public void ActivateInputField() {}
         public void MoveTextEnd(bool shift) {}
         public UnityEngine.Transform transform { get; } = new UnityEngine.Transform();
         public UnityEngine.UI.Graphic placeholder { get; set; } = null!;
-        public UnityEngine.UI.Graphic placeholder { get; set; }
+        public SubmitEvent onSubmit { get; set; } = new SubmitEvent();
+    }
+
+    public class SubmitEvent
+    {
+        public void AddListener(Action<string> call) {}
+        public UnityEngine.Events.UnityEvent<string> onSubmit { get; } = new UnityEngine.Events.UnityEvent<string>();
     }
 
     public class TMP_TextInfo
@@ -271,6 +255,7 @@ namespace TMPro
         public static int ID_OutlineColor;
     }
 }
+
 
 namespace UnityEditor
 {

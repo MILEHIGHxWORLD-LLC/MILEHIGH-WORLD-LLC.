@@ -19,3 +19,26 @@
 ## 2025-06-15 - [Terminal Shortcut Discoverability]
 **Learning:** Keyboard shortcuts in CLI interfaces (like Up/Down for history or Tab for completion) are often invisible to new users unless explicitly hinted.
 **Action:** Include a muted gray (#888888) tip in the 'help' command output detailing available keyboard shortcuts.
+
+## 2025-06-18 - [Terminal Fuzzy Matching]
+**Learning:** Terminal-based interfaces are prone to user typos, especially when commands are technical. Providing "Did you mean?" suggestions using Levenshtein distance significantly reduces user frustration and improves the "intelligence" feel of the system.
+**Action:** Implement fuzzy matching suggestions for unknown commands in CLI-style interfaces to guide users toward valid inputs.
+
+## 2025-06-21 - [Terminal Power-User Shortcuts]
+**Learning:** Power-user shortcuts (like Ctrl+L for clear or Esc for clear-line) significantly enhance the "terminal-native" feel for experienced users, but remain entirely undiscoverable unless explicitly documented in the 'help' command.
+**Action:** Always pair new keyboard shortcuts with updated help documentation and muted shortcut hints.
+
+## 2025-06-25 - [Contextual UX Education]
+**Learning:** Users are most likely to seek help for a feature (like history) when they try to use it and fail. Providing contextual tips (e.g., in empty states) is more effective than static documentation for teaching power-user shortcuts.
+**Action:** Always include helpful, contextual hints in "empty states" to guide users toward relevant shortcuts or features.
+
+## 2025-06-28 - [Retro Terminal Immersion]
+**Learning:** Retro terminal immersion is significantly enhanced by providing simulated system metadata (like version strings and "Last Login" timestamps) during the startup sequence. This makes the interface feel like a functional part of the game's universe rather than just a UI layer.
+**Action:** Include simulated session info and system versions in CLI-style startup sequences to deepen environmental storytelling and player immersion.
+## 2025-06-28 - [Terminal Blinking Cursor Integration]
+**Learning:** When implementing a blinking cursor in a typewriter-reveal UI (TextMeshPro), appending the cursor ('█') to the text buffer and managing its visibility by toggling `maxVisibleCharacters` between `N` and `N+1` (where N is the current revealed character count) provides a stable, flicker-free effect that respects Rich Text tags.
+**Action:** Coordinate cursor visibility coroutines with typewriter reveal logic to ensure the cursor always trails the most recently revealed character.
+
+## 2026-06-17 - [Accessibility Contrast & Reactive Completion]
+**Learning:** To meet WCAG AA standards on dark backgrounds, secondary/muted text color should be at least #AAAAAA (up from #888888) to ensure a contrast ratio >= 4.5:1. Furthermore, providing a "reactive" tab completion that recalls the last fuzzy suggestion on an empty input line significantly improves error recovery flow.
+**Action:** Always use #AAAAAA for muted text and implement suggestion-aware tab completion in CLI interfaces.
