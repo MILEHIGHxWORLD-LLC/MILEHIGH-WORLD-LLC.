@@ -6,7 +6,13 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using UnityEngine;
+using UnityEngine.UI;
+using TMPro;
 
 namespace Milehigh.World.Terminal
 {
@@ -17,6 +23,7 @@ namespace Milehigh.World.Terminal
 
         [Header("Typewriter Settings")]
         [SerializeField] private float typingSpeed = 0.02f;
+        [SerializeField] private float commaDelay = 0.08f;
         [SerializeField] private float punctuationDelay = 0.15f;
         [SerializeField] private float commaDelay = 0.08f;
 
@@ -62,6 +69,10 @@ namespace Milehigh.World.Terminal
         private void OnEnable()
         {
             commandInput?.ActivateInputField();
+            if (_cursorCoroutine == null)
+            {
+                _cursorCoroutine = StartCoroutine(HandleBlinkingCursor());
+            }
             if (_cursorCoroutine == null) _cursorCoroutine = StartCoroutine(HandleBlinkingCursor());
         }
 
@@ -80,6 +91,11 @@ namespace Milehigh.World.Terminal
             outputDisplay.text = "";
             outputDisplay.maxVisibleCharacters = 0;
 
+            // 🎨 Palette: Enhanced retro terminal startup sequence with simulated session info.
+            string timestamp = DateTime.Now.ToString("ddd MMM dd HH:mm:ss yyyy");
+            WriteToTerminal($"<color=#00FF00>[SYSTEM]</color>: OTIS v2.4.0-VOID_LATTICE" +
+                            $"\n<color=#AAAAAA>Last login: {timestamp} on ttys001</color>" +
+                            $"\nWelcome to the Terminal. Type <color=#00FFFF>'help'</color> for available commands.");
             int hour = DateTime.Now.Hour;
             string greeting = (hour >= 5 && hour < 12) ? "Good morning, Operator." :
                              (hour >= 12 && hour < 17) ? "Good afternoon, Operator." :
@@ -97,17 +113,20 @@ namespace Milehigh.World.Terminal
             while (true)
             {
                 _cursorVisible = !_cursorVisible;
+                UpdateCursorVisibility();
+                yield return GetWait(0.53f); // Standard terminal blink rate
                 UpdateCursorDisplay();
                 yield return GetWait(0.53f);
             }
         }
 
-        private void UpdateCursorDisplay()
+        private void UpdateCursorVisibility()
         {
             if (outputDisplay == null || _typewriterCoroutine != null) return;
 
-            outputDisplay.ForceMeshUpdate();
             int totalChars = outputDisplay.textInfo.characterCount;
+            if (totalChars == 0 || !outputDisplay.text.EndsWith("█")) return;
+
             outputDisplay.maxVisibleCharacters = _cursorVisible ? totalChars : Mathf.Max(0, totalChars - 1);
         }
 
@@ -125,7 +144,10 @@ namespace Milehigh.World.Terminal
                 _historyIndex = -1;
                 commandInput.ActivateInputField();
             }
-            else if (Input.GetKeyDown(KeyCode.L) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl))) ClearTerminal();
+            else if (Input.GetKeyDown(KeyCode.L) && (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl)))
+            {
+                ClearTerminal();
+            }
         }
 
         private void ClearTerminal()
@@ -180,12 +202,13 @@ namespace Milehigh.World.Terminal
 
             if (!SafeCommandRegex.IsMatch(input))
             {
-                WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
+                WriteToTerminal($"\n<color=#888888>> {sanitizedInput}</color>");
                 WriteToTerminal("\n<color=#FF0000>[SECURITY]</color>: Invalid characters detected.");
                 CleanupInput();
                 return;
             }
 
+            WriteToTerminal($"\n<color=#888888>> {sanitizedInput}</color>");
             // 🎨 Palette: Echo sanitized input exactly once after validation.
             WriteToTerminal($"\n<color=#AAAAAA>> {sanitizedInput}</color>");
 
@@ -220,6 +243,7 @@ namespace Milehigh.World.Terminal
             {
                 for (int i = 0; i < _commandHistory.Count; i++)
                 {
+                    // 🛡️ Sentinel: Sanitize history entries to prevent Rich Text UI injection.
                     // 🛡️ Sentinel: Sanitize history entries by escaping Rich Text tags to prevent UI injection/DoS.
                     string sanitizedEntry = _commandHistory[i].Replace("<", "&lt;").Replace(">", "&gt;");
                     sb.Append("\n ").Append(i + 1).Append(": <color=#00FFFF>").Append(sanitizedEntry).Append("</color>");
@@ -281,16 +305,17 @@ namespace Milehigh.World.Terminal
             if (string.IsNullOrEmpty(s)) return t?.Length ?? 0;
             if (string.IsNullOrEmpty(t)) return s.Length;
 
-            int n = s.Length, m = t.Length;
             int n = s.Length;
             int m = t.Length;
 
             if (n < m)
             {
-                string tempS = s; s = t; t = tempS;
-                int tempN = n; n = m; m = tempN;
+                string tempString = s; s = t; t = tempString;
+                int tempInt = n; n = m; m = tempInt;
             }
 
+            // ⚡ Bolt: Use stack allocation for small strings (common in terminal commands) to avoid heap allocations.
+            // Swapping Span references is used instead of CopyTo to save O(M) operations per iteration.
             // ⚡ Bolt: Optimized Levenshtein Distance using Span<int> and stackalloc to eliminate heap allocations.
             // Uses O(M) space and swaps span references to avoid redundant copies.
             Span<int> v0 = m < 128 ? stackalloc int[m + 1] : new int[m + 1];
@@ -307,6 +332,7 @@ namespace Milehigh.World.Terminal
                     v1[j + 1] = Math.Min(Math.Min(v1[j] + 1, v0[j + 1] + 1), v0[j] + cost);
                 }
 
+                // Swap spans to eliminate O(M) copy operations per iteration.
                 for (int j = 0; j <= m; j++) v0[j] = v1[j];
                 Span<int> temp = v0;
                 v0 = v1;
@@ -336,6 +362,15 @@ namespace Milehigh.World.Terminal
 
         private IEnumerator TypewriterEffect(string message)
         {
+            // Remove the trailing cursor if it exists before appending
+            if (outputDisplay.text.EndsWith("█"))
+            {
+                outputDisplay.text = outputDisplay.text.Substring(0, outputDisplay.text.Length - 1);
+            }
+
+            outputDisplay.ForceMeshUpdate();
+            int startVisibleCount = outputDisplay.textInfo.characterCount;
+
             outputDisplay.ForceMeshUpdate();
             int startVisibleCount = outputDisplay.textInfo.characterCount;
 
@@ -351,6 +386,10 @@ namespace Milehigh.World.Terminal
             int totalChars = outputDisplay.textInfo.characterCount;
             int endVisibleCount = totalChars - 1;
 
+            for (int i = 1; i <= (totalChars - startVisibleCount - 1); i++)
+            {
+                int currentIndex = startVisibleCount + i;
+                outputDisplay.maxVisibleCharacters = _cursorVisible ? currentIndex + 1 : currentIndex;
             for (int i = startVisibleCount; i <= endVisibleCount; i++)
             {
                 outputDisplay.maxVisibleCharacters = i;

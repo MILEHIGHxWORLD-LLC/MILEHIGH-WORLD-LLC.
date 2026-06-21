@@ -15,7 +15,6 @@ namespace Milehigh.Core
 
         // 🛡️ Sentinel: Hardened blocklist to prevent Insecure Direct Object Reference (IDOR) attacks on critical system managers.
         // Uses OrdinalIgnoreCase for defense-in-depth against case-insensitive bypass attempts.
-        // Initialized with OrdinalIgnoreCase to provide defense-in-depth against case-insensitive IDOR bypass attempts.
         private static readonly HashSet<string> ProtectedSystemObjects = new HashSet<string>(System.StringComparer.OrdinalIgnoreCase)
         {
             "CampaignManager", "SceneDirector", "CameraManager", "AlliancePowerManager",
@@ -139,9 +138,16 @@ namespace Milehigh.Core
                 return null;
             }
 
-            if (_objectCache.TryGetValue(objectName, out GameObject? obj) && obj != null)
+            // ⚡ Bolt: Use TryGetValue to support negative caching (explicitly storing null in the cache).
+            // This eliminates redundant expensive GameObject.Find calls for objects that are known to be missing.
+            if (_objectCache.TryGetValue(objectName, out GameObject? obj))
             {
-                return obj;
+                // System.Object.ReferenceEquals is required here because Unity's '== null' check returns true
+                // for destroyed native objects. A true null in the cache means we've searched and found nothing.
+                if (System.Object.ReferenceEquals(obj, null)) return null;
+
+                // If the object exists but its native representation is destroyed, we should re-find it.
+                if (obj != null) return obj;
             }
 
             GameObject? foundObj = GameObject.Find(objectName);
@@ -210,6 +216,10 @@ namespace Milehigh.Core
             if (target != null)
             {
                 // 🛡️ Sentinel: Double validation - check the resolved object name against the blocklist
+                // to prevent potential bypasses if the object was retrieved via a different alias or path.
+                if (ProtectedSystemObjects.Contains(target.name.Trim()))
+                {
+                    Debug.LogError($"[Security] Blocked unauthorized interaction attempt to resolved system object: {target.name}");
                 // as defense-in-depth against path-based or hierarchy-based bypasses (e.g. "/CampaignManager").
                 string targetName = target.name.Trim();
                 if (ProtectedSystemObjects.Contains(targetName))
