@@ -140,6 +140,8 @@ namespace Milehigh.Core
 
             if (_objectCache.TryGetValue(objectName, out GameObject? obj))
             {
+                // System.Object.ReferenceEquals is required here because Unity's '== null' check returns true
+                // for destroyed native objects.
                 if (System.Object.ReferenceEquals(obj, null)) return null;
                 if (obj != null) return obj;
             }
@@ -181,6 +183,9 @@ namespace Milehigh.Core
 
             // 🛡️ Sentinel: Double Validation Pipeline
             // 1. Validate the untrusted input string against the blocklist.
+            // 🛡️ Sentinel: Prevent Insecure Direct Object Reference (IDOR) by sanitizing untrusted external object IDs.
+            if (interaction == null || string.IsNullOrWhiteSpace(interaction.objectId)) return;
+
             string cleanId = interaction.objectId.Trim();
             if (ProtectedSystemObjects.Contains(cleanId))
             {
@@ -193,6 +198,7 @@ namespace Milehigh.Core
             {
                 // 2. Resolve the object, and then RE-VALIDATE the resolved object's actual name.
                 // This prevents bypasses using paths or hierarchy-based lookups (e.g. "/CampaignManager").
+                // 🛡️ Sentinel: Double validation - check the resolved object name against the blocklist
                 string targetName = target.name.Trim();
                 if (ProtectedSystemObjects.Contains(targetName))
                 {
